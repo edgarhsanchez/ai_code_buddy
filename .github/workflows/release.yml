@@ -54,7 +54,7 @@ jobs:
           - os: macos-13
             target: x86_64-apple-darwin
             asset_name: ai_buddy-macos-x86_64
-          - os: macos-latest
+          - os: macos-13
             target: aarch64-apple-darwin
             asset_name: ai_buddy-macos-aarch64
 
@@ -105,21 +105,17 @@ jobs:
 
     - name: Build binary (macOS)
       if: runner.os == 'macOS'
+      shell: bash
       run: |
-        # Check if we're building for the native architecture
-        if [[ "${{ matrix.target }}" == "aarch64-apple-darwin" && "$(uname -m)" == "arm64" ]]; then
-          # Native ARM64 build
-          cargo build --release
-          cp target/release/ai_buddy ${{ matrix.asset_name }}
-        elif [[ "${{ matrix.target }}" == "x86_64-apple-darwin" && "$(uname -m)" == "x86_64" ]]; then
-          # Native x86_64 build
-          cargo build --release
-          cp target/release/ai_buddy ${{ matrix.asset_name }}
-        else
-          # Cross-compilation build
-          cargo build --release --target ${{ matrix.target }}
-          cp target/${{ matrix.target }}/release/ai_buddy ${{ matrix.asset_name }}
-        fi
+        echo "Building for target: ${{ matrix.target }}"
+        echo "Runner architecture: $(uname -m)"
+        
+        # Always use native build for macOS to avoid ring crate issues
+        cargo build --release
+        cp target/release/ai_buddy ${{ matrix.asset_name }}
+        
+        echo "Binary created: ${{ matrix.asset_name }}"
+        file ${{ matrix.asset_name }}
       env:
         CARGO_NET_RETRY: 10
         RUSTFLAGS: "-C target-cpu=generic"

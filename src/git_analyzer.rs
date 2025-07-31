@@ -88,7 +88,7 @@ impl GitAnalyzer {
         Ok(String::from_utf8_lossy(blob.content()).to_string())
     }
 
-    fn get_branch_commit(&self, branch_name: &str) -> Result<Commit> {
+    fn get_branch_commit(&self, branch_name: &str) -> Result<Commit<'_>> {
         let branch = self
             .repo
             .find_branch(branch_name, git2::BranchType::Local)

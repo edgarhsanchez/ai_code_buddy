@@ -19,7 +19,9 @@ pub struct AppState {
     pub selected_severity: Option<Severity>,
     pub all_issues: Vec<CodeIssue>,
     pub filtered_issues: Vec<usize>, // indices into all_issues
+    #[allow(dead_code)]
     pub scroll_position: usize,
+    #[allow(dead_code)]
     pub show_help: bool,
 }
 
@@ -69,11 +71,11 @@ impl AppState {
                 let category_match = self
                     .selected_category
                     .as_ref()
-                    .map_or(true, |cat| &issue.category == cat);
+                    .is_none_or(|cat| &issue.category == cat);
                 let severity_match = self
                     .selected_severity
                     .as_ref()
-                    .map_or(true, |sev| &issue.severity == sev);
+                    .is_none_or(|sev| &issue.severity == sev);
                 category_match && severity_match
             })
             .map(|(idx, _)| idx)
@@ -84,6 +86,7 @@ impl AppState {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_current_issue(&self) -> Option<&CodeIssue> {
         self.filtered_issues
             .get(self.selected_issue_index)
@@ -137,14 +140,12 @@ impl AppState {
 
         if critical_count > 0 {
             report.push_str(&format!(
-                "⚠️ **CRITICAL:** {} critical issues require immediate attention before merge.\n",
-                critical_count
+                "⚠️ **CRITICAL:** {critical_count} critical issues require immediate attention before merge.\n"
             ));
         }
         if high_count > 0 {
             report.push_str(&format!(
-                "🔶 **HIGH:** {} high-priority issues should be addressed.\n",
-                high_count
+                "🔶 **HIGH:** {high_count} high-priority issues should be addressed.\n"
             ));
         }
         report.push_str(&format!(
@@ -202,7 +203,7 @@ impl AppState {
         for issue in &self.all_issues {
             category_issues
                 .entry(&issue.category)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(issue);
         }
 
@@ -218,7 +219,7 @@ impl AppState {
                 };
                 report.push_str(&format!("- **{}** `{}` ", severity_badge, issue.file_path));
                 if let Some(line) = issue.line_number {
-                    report.push_str(&format!("(Line {})", line));
+                    report.push_str(&format!("(Line {line})"));
                 }
                 report.push_str(&format!(
                     "\n  {}\n  *Fix:* {}\n\n",
@@ -238,9 +239,9 @@ impl AppState {
         if !self.review.priority_recommendations.is_empty() {
             report.push_str("## Recommendations\n\n");
             for rec in &self.review.priority_recommendations {
-                report.push_str(&format!("- {}\n", rec));
+                report.push_str(&format!("- {rec}\n"));
             }
-            report.push_str("\n");
+            report.push('\n');
         }
 
         // Technology Stack
@@ -365,7 +366,7 @@ pub async fn run_tui(review: Review) -> anyhow::Result<()> {
                 }
             }
             _ => {
-                println!("❌ Unknown command: '{}'. Type 'h' for help.", command);
+                println!("❌ Unknown command: '{command}'. Type 'h' for help.");
                 println!("Press Enter to continue...");
                 let mut _input = String::new();
                 io::stdin().read_line(&mut _input)?;
@@ -416,22 +417,22 @@ fn print_overview(state: &AppState) {
 
     println!("\n🚨 Issues by Severity:");
     if critical_count > 0 {
-        println!("   🔴 Critical: {}", critical_count);
+        println!("   🔴 Critical: {critical_count}");
     }
     if high_count > 0 {
-        println!("   🟠 High: {}", high_count);
+        println!("   🟠 High: {high_count}");
     }
     if medium_count > 0 {
-        println!("   🟡 Medium: {}", medium_count);
+        println!("   🟡 Medium: {medium_count}");
     }
     if low_count > 0 {
-        println!("   🟢 Low: {}", low_count);
+        println!("   🟢 Low: {low_count}");
     }
 
     if !state.review.priority_recommendations.is_empty() {
         println!("\n⚡ Priority Recommendations:");
         for rec in &state.review.priority_recommendations {
-            println!("   • {}", rec);
+            println!("   • {rec}");
         }
     }
 
@@ -453,11 +454,7 @@ fn print_issues_list(state: &AppState) {
     }
 
     // Show up to 10 issues around the selected one
-    let start = if state.selected_issue_index >= 5 {
-        state.selected_issue_index - 5
-    } else {
-        0
-    };
+    let start = state.selected_issue_index.saturating_sub(5);
     let end = (start + 10).min(state.filtered_issues.len());
 
     for i in start..end {
@@ -483,7 +480,7 @@ fn print_issues_list(state: &AppState) {
                     issue.category,
                     issue.file_path,
                     if let Some(line) = issue.line_number {
-                        format!(":{}", line)
+                        format!(":{line}")
                     } else {
                         String::new()
                     }
@@ -522,7 +519,7 @@ fn print_issue_detail(state: &AppState, issue_idx: usize) {
 
         println!("📁 File: {}", issue.file_path);
         if let Some(line) = issue.line_number {
-            println!("📍 Line: {}", line);
+            println!("📍 Line: {line}");
         }
         println!("📂 Category: {:?}", issue.category);
         println!("{} Severity: {:?}", severity_icon, issue.severity);
@@ -537,7 +534,7 @@ fn print_issue_detail(state: &AppState, issue_idx: usize) {
             println!("\n📄 Code Snippet:");
             println!("┌{}", "─".repeat(48));
             for line in snippet.lines() {
-                println!("│ {}", line);
+                println!("│ {line}");
             }
             println!("└{}", "─".repeat(48));
         }
@@ -609,9 +606,9 @@ fn print_files_view(state: &AppState) {
         };
 
         if issue_count > 0 {
-            println!("{} {} ({} issues)", icon, file, issue_count);
+            println!("{icon} {file} ({issue_count} issues)");
         } else {
-            println!("{} {}", icon, file);
+            println!("{icon} {file}");
         }
     }
 
@@ -739,7 +736,7 @@ fn generate_critical_issues_report(state: &AppState) -> String {
             ));
             report.push_str(&format!("**File:** `{}`\n", issue.file_path));
             if let Some(line) = issue.line_number {
-                report.push_str(&format!("**Line:** {}\n", line));
+                report.push_str(&format!("**Line:** {line}\n"));
             }
             report.push_str(&format!("**Severity:** {:?}\n\n", issue.severity));
 

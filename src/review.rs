@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Severity {
+    #[allow(dead_code)]
     Critical,
     High,
     Medium,
@@ -17,8 +18,10 @@ pub enum IssueCategory {
     Readability,
     Testing,
     Documentation,
+    #[allow(dead_code)]
     Architecture,
     Style,
+    #[allow(dead_code)]
     BestPractices,
     PotentialBugs,
 }
@@ -36,9 +39,13 @@ pub struct CodeIssue {
 
 #[derive(Clone, Debug)]
 pub struct CommitInfo {
+    #[allow(dead_code)]
     pub hash: String,
+    #[allow(dead_code)]
     pub author: String,
+    #[allow(dead_code)]
     pub message: String,
+    #[allow(dead_code)]
     pub timestamp: String,
     pub files_changed: Vec<String>,
 }
@@ -48,6 +55,7 @@ pub struct TechnologyStack {
     pub programming_languages: Vec<String>,
     pub frameworks: Vec<String>,
     pub tools: Vec<String>,
+    #[allow(dead_code)]
     pub databases: Vec<String>,
 }
 
@@ -63,7 +71,9 @@ pub struct CodeMetrics {
     pub files_modified: u32,
     pub lines_added: u32,
     pub lines_removed: u32,
+    #[allow(dead_code)]
     pub complexity_score: Option<f32>,
+    #[allow(dead_code)]
     pub test_coverage: Option<f32>,
 }
 
@@ -82,7 +92,7 @@ impl Review {
     pub fn add_issue(&mut self, issue: CodeIssue) {
         self.issues
             .entry(issue.category.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(issue);
     }
 
@@ -138,10 +148,13 @@ impl Default for Review {
 
 #[derive(Clone, Debug)]
 pub struct ReviewConfig {
+    #[allow(dead_code)]
     pub source_branch: String,
+    #[allow(dead_code)]
     pub target_branch: String,
     pub include_patterns: Vec<String>,
     pub exclude_patterns: Vec<String>,
+    #[allow(dead_code)]
     pub max_issues_per_category: usize,
 }
 

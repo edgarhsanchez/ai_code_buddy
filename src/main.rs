@@ -24,8 +24,8 @@ async fn main() -> anyhow::Result<()> {
     let repo_path = pos_args.get(3).map(|s| s.as_str()).unwrap_or(".");
 
     println!("🔍 AI Code Review Tool");
-    println!("📂 Repository: {}", repo_path);
-    println!("🌿 Comparing: {} → {}", source_branch, target_branch);
+    println!("📂 Repository: {repo_path}");
+    println!("🌿 Comparing: {source_branch} → {target_branch}");
 
     // Perform code analysis
     let review = perform_code_analysis(source_branch, target_branch, repo_path).await?;
@@ -82,7 +82,7 @@ async fn perform_code_analysis(
     let mut issue_count = 0;
     for file_path in &changed_files {
         if should_analyze_file(file_path, &config) {
-            println!("  📄 Analyzing: {}", file_path);
+            println!("  📄 Analyzing: {file_path}");
 
             if let Ok(content) = git_analyzer.get_file_content_at_commit(file_path, source_branch) {
                 let language = detect_language(file_path);
@@ -96,12 +96,12 @@ async fn perform_code_analysis(
         }
     }
 
-    println!("✅ Analysis complete! Found {} issues.", issue_count);
+    println!("✅ Analysis complete! Found {issue_count} issues.");
 
     // Generate AI assessment
     let ai_assessment = generate_ai_assessment(&review).await;
     review.overall_assessment =
-        ai_assessment.unwrap_or_else(|e| format!("AI assessment unavailable: {}", e));
+        ai_assessment.unwrap_or_else(|e| format!("AI assessment unavailable: {e}"));
 
     // Add timestamp
     review.timestamp = chrono::Utc::now().to_rfc3339();
@@ -238,19 +238,16 @@ fn print_cli_summary(review: &Review) {
     let high = review.get_high_priority_issues().len() - critical;
 
     if critical > 0 {
-        println!(
-            "🚨 Critical issues: {} (REQUIRES IMMEDIATE ATTENTION)",
-            critical
-        );
+        println!("🚨 Critical issues: {critical} (REQUIRES IMMEDIATE ATTENTION)");
     }
     if high > 0 {
-        println!("⚠️  High priority issues: {}", high);
+        println!("⚠️  High priority issues: {high}");
     }
 
     if !review.priority_recommendations.is_empty() {
         println!("\n💡 Priority Recommendations:");
         for rec in &review.priority_recommendations {
-            println!("  • {}", rec);
+            println!("  • {rec}");
         }
     }
 
@@ -295,7 +292,7 @@ fn print_cli_summary(review: &Review) {
                     severity_icon,
                     issue.file_path,
                     if let Some(line) = issue.line_number {
-                        format!(":{}", line)
+                        format!(":{line}")
                     } else {
                         String::new()
                     }

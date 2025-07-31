@@ -127,7 +127,7 @@ impl CodeAnalyzer {
                         issues.push(CodeIssue {
                             category: category.clone(),
                             severity: severity.clone(),
-                            description: format!("Pattern '{}' found", pattern),
+                            description: format!("Pattern '{pattern}' found"),
                             file_path: file_path.to_string(),
                             line_number: Some((line_num + 1) as u32),
                             suggestion: suggestion.clone(),
@@ -172,8 +172,7 @@ impl CodeAnalyzer {
                             file_path: file_path.to_string(),
                             line_number: Some((start + 1) as u32),
                             suggestion: format!(
-                                "Consider breaking this {}-line function into smaller functions",
-                                function_length
+                                "Consider breaking this {function_length}-line function into smaller functions"
                             ),
                             code_snippet: None,
                         });
@@ -204,6 +203,7 @@ impl CodeAnalyzer {
         issues
     }
 
+    #[allow(dead_code)]
     pub fn analyze_complexity(&self, content: &str) -> f32 {
         // Simple cyclomatic complexity calculation
         let complexity_keywords = [

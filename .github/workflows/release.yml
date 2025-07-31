@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -13,18 +16,27 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.result }}
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: actions/github-script@v7
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
+        script: |
+          const tag = context.ref.replace("refs/tags/", "");
+          const release = await github.rest.repos.createRelease({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            tag_name: tag,
+            name: `Release ${tag}`,
+            draft: false,
+            prerelease: false,
+            generate_release_notes: true
+          });
+          return release.data.id;
 
   build-and-upload:
     name: Build and Upload
@@ -79,14 +91,33 @@ jobs:
         fi
 
     - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: actions/github-script@v7
       with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ./${{ matrix.asset_name }}
-        asset_name: ${{ matrix.asset_name }}
-        asset_content_type: application/octet-stream
+        script: |
+          const fs = require('fs');
+          const tag = context.ref.replace("refs/tags/", "");
+          const assetName = "${{ matrix.asset_name }}";
+          const assetPath = `./${assetName}`;
+          
+          // Get release by tag
+          const releases = await github.rest.repos.listReleases({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+          
+          const release = releases.data.find(r => r.tag_name === tag);
+          if (!release) {
+            throw new Error(`Release not found for tag ${tag}`);
+          }
+          
+          // Upload asset
+          await github.rest.repos.uploadReleaseAsset({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            release_id: release.id,
+            name: assetName,
+            data: fs.readFileSync(assetPath),
+          });
 
   publish-crates:
     name: Publish to crates.io

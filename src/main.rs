@@ -3,7 +3,7 @@ mod git_analyzer;
 mod code_analyzer;
 mod ui_simple;
 
-use review::{Review, ReviewConfig, CodeIssue, IssueCategory, Severity};
+use review::{Review, ReviewConfig, Severity};
 use git_analyzer::GitAnalyzer;
 use code_analyzer::CodeAnalyzer;
 use ui_simple::run_tui;

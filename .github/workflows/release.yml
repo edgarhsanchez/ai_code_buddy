@@ -94,6 +94,14 @@ jobs:
         CARGO_NET_RETRY: 10
         RUSTFLAGS: "-C target-cpu=generic"
 
+    - name: Publish to crates.io (Linux only)
+      if: runner.os == 'Linux'
+      run: |
+        echo "📦 Publishing to crates.io..."
+        cargo publish
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
     - name: Build binary (Windows)
       if: runner.os == 'Windows'
       run: |
@@ -156,30 +164,3 @@ jobs:
             name: assetName,
             data: fs.readFileSync(assetPath),
           });
-
-  publish-crates:
-    name: Publish to crates.io
-    needs: build-and-upload
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Cache dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/cache
-          ~/.cargo/registry/index
-          ~/.cargo/registry/cache
-          ~/.cargo/git/db
-          target
-        key: ubuntu-latest-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Publish to crates.io
-      run: cargo publish
-      env:
-        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

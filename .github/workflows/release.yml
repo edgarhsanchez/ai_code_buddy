@@ -51,9 +51,12 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             asset_name: ai_buddy-windows-x86_64.exe
-          - os: macos-latest
+          - os: macos-13
             target: x86_64-apple-darwin
             asset_name: ai_buddy-macos-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset_name: ai_buddy-macos-aarch64
 
     steps:
     - name: Checkout code
@@ -103,9 +106,20 @@ jobs:
     - name: Build binary (macOS)
       if: runner.os == 'macOS'
       run: |
-        # Native build for macOS to avoid OpenSSL cross-compilation issues
-        cargo build --release
-        cp target/release/ai_buddy ${{ matrix.asset_name }}
+        # Check if we're building for the native architecture
+        if [[ "${{ matrix.target }}" == "aarch64-apple-darwin" && "$(uname -m)" == "arm64" ]]; then
+          # Native ARM64 build
+          cargo build --release
+          cp target/release/ai_buddy ${{ matrix.asset_name }}
+        elif [[ "${{ matrix.target }}" == "x86_64-apple-darwin" && "$(uname -m)" == "x86_64" ]]; then
+          # Native x86_64 build
+          cargo build --release
+          cp target/release/ai_buddy ${{ matrix.asset_name }}
+        else
+          # Cross-compilation build
+          cargo build --release --target ${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/ai_buddy ${{ matrix.asset_name }}
+        fi
       env:
         CARGO_NET_RETRY: 10
         RUSTFLAGS: "-C target-cpu=generic"

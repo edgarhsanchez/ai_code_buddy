@@ -80,13 +80,16 @@ pub struct Review {
 
 impl Review {
     pub fn add_issue(&mut self, issue: CodeIssue) {
-        self.issues.entry(issue.category.clone()).or_insert_with(Vec::new).push(issue);
+        self.issues
+            .entry(issue.category.clone())
+            .or_insert_with(Vec::new)
+            .push(issue);
     }
-    
+
     pub fn total_issues(&self) -> usize {
         self.issues.values().map(|v| v.len()).sum()
     }
-    
+
     pub fn get_critical_issues(&self) -> Vec<&CodeIssue> {
         self.issues
             .values()
@@ -94,7 +97,7 @@ impl Review {
             .filter(|issue| matches!(issue.severity, Severity::Critical))
             .collect()
     }
-    
+
     pub fn get_high_priority_issues(&self) -> Vec<&CodeIssue> {
         self.issues
             .values()
@@ -168,7 +171,7 @@ mod tests {
     #[test]
     fn test_add_issue() {
         let mut review = Review::default();
-        
+
         let issue = CodeIssue {
             category: IssueCategory::Security,
             severity: Severity::High,
@@ -178,7 +181,7 @@ mod tests {
             suggestion: "Fix this".to_string(),
             code_snippet: Some("let x = 1;".to_string()),
         };
-        
+
         review.add_issue(issue);
         assert_eq!(review.total_issues(), 1);
     }
@@ -186,7 +189,7 @@ mod tests {
     #[test]
     fn test_severity_ordering() {
         use std::cmp::Ordering;
-        
+
         assert_eq!(Severity::Critical.cmp(&Severity::High), Ordering::Less);
         assert_eq!(Severity::High.cmp(&Severity::Medium), Ordering::Less);
         assert_eq!(Severity::Medium.cmp(&Severity::Low), Ordering::Less);
@@ -196,7 +199,7 @@ mod tests {
     #[test]
     fn test_get_critical_issues() {
         let mut review = Review::default();
-        
+
         let critical_issue = CodeIssue {
             category: IssueCategory::Security,
             severity: Severity::Critical,
@@ -206,7 +209,7 @@ mod tests {
             suggestion: "Fix immediately".to_string(),
             code_snippet: None,
         };
-        
+
         let low_issue = CodeIssue {
             category: IssueCategory::Style,
             severity: Severity::Low,
@@ -216,10 +219,10 @@ mod tests {
             suggestion: "Consider fixing".to_string(),
             code_snippet: None,
         };
-        
+
         review.add_issue(critical_issue);
         review.add_issue(low_issue);
-        
+
         let critical_issues = review.get_critical_issues();
         assert_eq!(critical_issues.len(), 1);
         assert_eq!(critical_issues[0].severity, Severity::Critical);

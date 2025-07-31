@@ -82,24 +82,33 @@ jobs:
           target
         key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Build binary
+    - name: Build binary (Linux)
+      if: runner.os == 'Linux'
       run: |
-        if [[ "${{ matrix.os }}" == "macos-latest" && "${{ matrix.target }}" == "x86_64-apple-darwin" ]]; then
-          # Native build for macOS to avoid OpenSSL cross-compilation issues
-          cargo build --release
-          cp target/release/ai_buddy ${{ matrix.asset_name }}
-        else
-          cargo build --release --target ${{ matrix.target }}
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            cp target/${{ matrix.target }}/release/ai_buddy.exe ${{ matrix.asset_name }}
-          else
-            cp target/${{ matrix.target }}/release/ai_buddy ${{ matrix.asset_name }}
-          fi
-        fi
+        cargo build --release --target ${{ matrix.target }}
+        cp target/${{ matrix.target }}/release/ai_buddy ${{ matrix.asset_name }}
       env:
         CARGO_NET_RETRY: 10
         RUSTFLAGS: "-C target-cpu=generic"
-        # OpenSSL configuration for cross-compilation
+
+    - name: Build binary (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cargo build --release --target ${{ matrix.target }}
+        cp target/${{ matrix.target }}/release/ai_buddy.exe ${{ matrix.asset_name }}
+      env:
+        CARGO_NET_RETRY: 10
+        RUSTFLAGS: "-C target-cpu=generic"
+
+    - name: Build binary (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        # Native build for macOS to avoid OpenSSL cross-compilation issues
+        cargo build --release
+        cp target/release/ai_buddy ${{ matrix.asset_name }}
+      env:
+        CARGO_NET_RETRY: 10
+        RUSTFLAGS: "-C target-cpu=generic"
         OPENSSL_STATIC: "1"
         OPENSSL_NO_VENDOR: "1"
 

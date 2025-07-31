@@ -1,5 +1,5 @@
 [package]
-name = "ai_buddy"
+name = "ai-code-buddy"
 version = "0.1.0"
 edition = "2021"
 authors = ["Edgar H. Sanchez <esanchez@m2iab.com>"]
@@ -8,7 +8,7 @@ readme = "README.md"
 homepage = "https://github.com/edgarhsanchez/ai_buddy"
 repository = "https://github.com/edgarhsanchez/ai_buddy"
 license = "MIT"
-keywords = ["ai", "code-review", "git", "analysis", "cli"]
+keywords = ["ai", "code-review", "git", "analysis", "cli", "buddy"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]

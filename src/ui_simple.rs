@@ -446,7 +446,7 @@ fn print_issue_detail(state: &AppState, issue_idx: usize) {
     }
 }
 
-fn print_report_generation(state: &AppState) {
+fn print_report_generation(_state: &AppState) {
     println!("📄 Generate Report");
     println!("{}", "=".repeat(50));
     println!("Choose a report format to generate:");

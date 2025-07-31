@@ -139,9 +139,9 @@ impl GitAnalyzer {
 
     pub fn detect_technology_stack(&self, files: &[String]) -> Result<crate::review::TechnologyStack> {
         let mut languages = HashSet::new();
-        let mut frameworks = HashSet::new();
+        let frameworks = HashSet::new();
         let mut tools = HashSet::new();
-        let mut databases = HashSet::new();
+        let databases = HashSet::new();
         
         for file in files {
             // Detect programming languages by file extension

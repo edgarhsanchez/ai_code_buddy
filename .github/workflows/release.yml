@@ -47,16 +47,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            asset_name: ai_buddy-linux-x86_64
+            asset_name: ai-code-buddy-linux-x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            asset_name: ai_buddy-windows-x86_64.exe
+            asset_name: ai-code-buddy-windows-x86_64.exe
           - os: macos-13
             target: x86_64-apple-darwin
-            asset_name: ai_buddy-macos-x86_64
+            asset_name: ai-code-buddy-macos-x86_64
           - os: macos-13
             target: aarch64-apple-darwin
-            asset_name: ai_buddy-macos-aarch64
+            asset_name: ai-code-buddy-macos-aarch64
 
     steps:
     - name: Checkout code
@@ -89,7 +89,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         cargo build --release --target ${{ matrix.target }}
-        cp target/${{ matrix.target }}/release/ai_buddy ${{ matrix.asset_name }}
+        cp target/${{ matrix.target }}/release/ai-code-buddy ${{ matrix.asset_name }}
       env:
         CARGO_NET_RETRY: 10
         RUSTFLAGS: "-C target-cpu=generic"
@@ -98,7 +98,7 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         cargo build --release --target ${{ matrix.target }}
-        cp target/${{ matrix.target }}/release/ai_buddy.exe ${{ matrix.asset_name }}
+        cp target/${{ matrix.target }}/release/ai-code-buddy.exe ${{ matrix.asset_name }}
       env:
         CARGO_NET_RETRY: 10
         RUSTFLAGS: "-C target-cpu=generic"
@@ -112,7 +112,7 @@ jobs:
         
         # Always use native build for macOS to avoid ring crate issues
         cargo build --release
-        cp target/release/ai_buddy ${{ matrix.asset_name }}
+        cp target/release/ai-code-buddy ${{ matrix.asset_name }}
         
         echo "Binary created: ${{ matrix.asset_name }}"
         file ${{ matrix.asset_name }}

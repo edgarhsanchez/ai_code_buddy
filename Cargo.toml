@@ -2,7 +2,7 @@
 name = "ai_buddy"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Edgar Sanchez <edgar@example.com>"]
 description = "An AI-powered code review tool that analyzes Git repositories and provides intelligent feedback"
 readme = "README.md"
 homepage = "https://github.com/edgarhsanchez/ai_buddy"

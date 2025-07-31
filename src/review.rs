@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Severity {
     Critical,
     High,
@@ -151,5 +151,77 @@ impl Default for ReviewConfig {
             exclude_patterns: vec!["target/**".to_string()],
             max_issues_per_category: 10,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_review_creation() {
+        let review = Review::default();
+        assert_eq!(review.issues.len(), 0);
+        assert_eq!(review.total_issues(), 0);
+    }
+
+    #[test]
+    fn test_add_issue() {
+        let mut review = Review::default();
+        
+        let issue = CodeIssue {
+            category: IssueCategory::Security,
+            severity: Severity::High,
+            description: "Test issue".to_string(),
+            file_path: "test.rs".to_string(),
+            line_number: Some(10),
+            suggestion: "Fix this".to_string(),
+            code_snippet: Some("let x = 1;".to_string()),
+        };
+        
+        review.add_issue(issue);
+        assert_eq!(review.total_issues(), 1);
+    }
+
+    #[test]
+    fn test_severity_ordering() {
+        use std::cmp::Ordering;
+        
+        assert_eq!(Severity::Critical.cmp(&Severity::High), Ordering::Less);
+        assert_eq!(Severity::High.cmp(&Severity::Medium), Ordering::Less);
+        assert_eq!(Severity::Medium.cmp(&Severity::Low), Ordering::Less);
+        assert_eq!(Severity::Low.cmp(&Severity::Info), Ordering::Less);
+    }
+
+    #[test]
+    fn test_get_critical_issues() {
+        let mut review = Review::default();
+        
+        let critical_issue = CodeIssue {
+            category: IssueCategory::Security,
+            severity: Severity::Critical,
+            description: "Critical issue".to_string(),
+            file_path: "test.rs".to_string(),
+            line_number: Some(10),
+            suggestion: "Fix immediately".to_string(),
+            code_snippet: None,
+        };
+        
+        let low_issue = CodeIssue {
+            category: IssueCategory::Style,
+            severity: Severity::Low,
+            description: "Style issue".to_string(),
+            file_path: "test.rs".to_string(),
+            line_number: Some(20),
+            suggestion: "Consider fixing".to_string(),
+            code_snippet: None,
+        };
+        
+        review.add_issue(critical_issue);
+        review.add_issue(low_issue);
+        
+        let critical_issues = review.get_critical_issues();
+        assert_eq!(critical_issues.len(), 1);
+        assert_eq!(critical_issues[0].severity, Severity::Critical);
     }
 }

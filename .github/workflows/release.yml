@@ -145,18 +145,52 @@ jobs:
           const assetName = "${{ matrix.asset_name }}";
           const assetPath = `./${assetName}`;
           
-          // Get release by tag
-          const releases = await github.rest.repos.listReleases({
+          console.log(`Uploading asset: ${assetName} from path: ${assetPath}`);
+          
+          // Get release by tag with retry logic
+          let release;
+          for (let i = 0; i < 5; i++) {
+            try {
+              const releases = await github.rest.repos.listReleases({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              });
+              
+              release = releases.data.find(r => r.tag_name === tag);
+              if (release) break;
+              
+              console.log(`Release not found, attempt ${i + 1}/5, waiting 2 seconds...`);
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            } catch (error) {
+              console.log(`Error getting releases: ${error.message}`);
+            }
+          }
+          
+          if (!release) {
+            throw new Error(`Release not found for tag ${tag} after 5 attempts`);
+          }
+          
+          console.log(`Found release: ${release.id}`);
+          
+          // Check if asset already exists
+          const existingAssets = await github.rest.repos.listReleaseAssets({
             owner: context.repo.owner,
             repo: context.repo.repo,
+            release_id: release.id,
           });
           
-          const release = releases.data.find(r => r.tag_name === tag);
-          if (!release) {
-            throw new Error(`Release not found for tag ${tag}`);
+          const existingAsset = existingAssets.data.find(asset => asset.name === assetName);
+          if (existingAsset) {
+            console.log(`Asset ${assetName} already exists, deleting first...`);
+            await github.rest.repos.deleteReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              asset_id: existingAsset.id,
+            });
           }
           
           // Upload asset
+          console.log(`Uploading asset ${assetName}...`);
           await github.rest.repos.uploadReleaseAsset({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -164,3 +198,5 @@ jobs:
             name: assetName,
             data: fs.readFileSync(assetPath),
           });
+          
+          console.log(`Successfully uploaded ${assetName}`);

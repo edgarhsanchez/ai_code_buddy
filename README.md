@@ -1,6 +1,6 @@
-# AI Buddy
+# AI Code Buddy
 
-[![Crates.io](https://img.shields.io/crates/v/ai_buddy.svg)](https://crates.io/crates/ai_buddy)
+[![Crates.io](https://img.shields.io/crates/v/ai-code-buddy.svg)](https://crates.io/crates/ai-code-buddy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An AI-powered code review tool that analyzes Git repositories and provides intelligent feedback on code quality, security, performance, and maintainability.
@@ -19,7 +19,7 @@ An AI-powered code review tool that analyzes Git repositories and provides intel
 ### From crates.io
 
 ```bash
-cargo install ai_buddy
+cargo install ai-code-buddy
 ```
 
 ### From source
@@ -36,17 +36,17 @@ cargo build --release
 
 ```bash
 # Analyze current branch against develop
-ai_buddy --cli
+ai-code-buddy --cli
 
 # Analyze specific branches
-ai_buddy --cli --source feature-branch --target main
+ai-code-buddy --cli --source feature-branch --target main
 ```
 
 ### Interactive TUI Mode
 
 ```bash
 # Launch interactive interface
-ai_buddy
+ai-code-buddy
 ```
 
 The interactive mode provides:

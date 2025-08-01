@@ -1,6 +1,7 @@
 use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Severity {
     #[allow(dead_code)]
     Critical,
@@ -10,7 +11,7 @@ pub enum Severity {
     Info,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum IssueCategory {
     Security,
     Performance,
@@ -26,7 +27,7 @@ pub enum IssueCategory {
     PotentialBugs,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CodeIssue {
     pub category: IssueCategory,
     pub severity: Severity,
@@ -37,7 +38,7 @@ pub struct CodeIssue {
     pub code_snippet: Option<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommitInfo {
     #[allow(dead_code)]
     pub hash: String,
@@ -50,7 +51,7 @@ pub struct CommitInfo {
     pub files_changed: Vec<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TechnologyStack {
     pub programming_languages: Vec<String>,
     pub frameworks: Vec<String>,
@@ -59,14 +60,14 @@ pub struct TechnologyStack {
     pub databases: Vec<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BranchComparison {
     pub source_branch: String,
     pub target_branch: String,
     pub commits_analyzed: Vec<CommitInfo>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CodeMetrics {
     pub files_modified: u32,
     pub lines_added: u32,
@@ -77,7 +78,7 @@ pub struct CodeMetrics {
     pub test_coverage: Option<f32>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Review {
     pub branch_comparison: BranchComparison,
     pub metrics: CodeMetrics,

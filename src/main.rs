@@ -3,11 +3,115 @@ mod git_analyzer;
 mod review;
 mod ui_simple;
 
+use clap::Parser;
 use code_analyzer::CodeAnalyzer;
 use git_analyzer::GitAnalyzer;
 use review::{Review, ReviewConfig, Severity};
 use std::path::Path;
 use ui_simple::run_tui;
+use glob::Pattern;
+
+#[derive(Parser)]
+#[command(
+    name = "ai-code-buddy",
+    version = "0.1.0",
+    about = "🤖 AI-powered code review tool that analyzes Git repositories",
+    long_about = "AI Code Buddy is an intelligent code analysis tool that compares branches, \
+                  detects security vulnerabilities, performance issues, and code quality problems. \
+                  It uses advanced pattern matching and AI-powered analysis to provide \
+                  comprehensive code reviews with precise line-by-line feedback."
+)]
+struct Cli {
+    /// Git repository path to analyze
+    #[arg(
+        value_name = "REPO_PATH",
+        default_value = ".",
+        help = "Path to the Git repository (default: current directory)"
+    )]
+    repo_path: String,
+
+    /// Source branch for comparison
+    #[arg(
+        short = 's',
+        long = "source",
+        value_name = "BRANCH",
+        default_value = "main",
+        help = "Source branch to compare from"
+    )]
+    source_branch: String,
+
+    /// Target branch for comparison
+    #[arg(
+        short = 't',
+        long = "target", 
+        value_name = "BRANCH",
+        default_value = "HEAD",
+        help = "Target branch to compare to (default: HEAD)"
+    )]
+    target_branch: String,
+
+    /// Use CLI mode instead of interactive TUI
+    #[arg(
+        long = "cli",
+        help = "Run in CLI mode with text output instead of interactive interface"
+    )]
+    cli_mode: bool,
+
+    /// Enable verbose output
+    #[arg(
+        short = 'v',
+        long = "verbose",
+        help = "Enable verbose output for debugging"
+    )]
+    verbose: bool,
+
+    /// Show credits and contributors
+    #[arg(
+        long = "credits",
+        help = "Show credits and list all contributors to the project"
+    )]
+    show_credits: bool,
+
+    /// Output format for results
+    #[arg(
+        short = 'f',
+        long = "format",
+        value_enum,
+        default_value = "summary",
+        help = "Output format for results"
+    )]
+    output_format: OutputFormat,
+
+    /// Exclude files matching pattern
+    #[arg(
+        long = "exclude",
+        value_name = "PATTERN",
+        help = "Exclude files matching glob pattern (can be used multiple times)",
+        action = clap::ArgAction::Append
+    )]
+    exclude_patterns: Vec<String>,
+
+    /// Include only files matching pattern
+    #[arg(
+        long = "include",
+        value_name = "PATTERN", 
+        help = "Include only files matching glob pattern (can be used multiple times)",
+        action = clap::ArgAction::Append
+    )]
+    include_patterns: Vec<String>,
+}
+
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum OutputFormat {
+    /// Summary output with key findings
+    Summary,
+    /// Detailed output with all issues
+    Detailed,
+    /// JSON format for programmatic use
+    Json,
+    /// Markdown format for documentation
+    Markdown,
+}
 
 // AI Analysis Functions
 async fn analyze_code_changes_with_ai(file_changes: Vec<(String, String, String)>) -> anyhow::Result<String> {
@@ -71,42 +175,125 @@ fn analyze_rust_changes(path: &str, _source: &str, target: &str) -> String {
     let mut issues = Vec::new();
     let lines: Vec<&str> = target.lines().collect();
     
-    // Security analysis with line numbers
+    // OWASP & Security analysis with line numbers
     for (line_num, line) in lines.iter().enumerate() {
         let line_number = line_num + 1;
         
+        // Memory Safety & Critical Security
         if line.contains("unsafe") {
-            issues.push(format!("🚨 CRITICAL: Line {}: Unsafe code blocks detected - requires careful review for memory safety", line_number));
-        }
-        if line.contains("unwrap()") && line.contains("std::env::args()") {
-            issues.push(format!("⚠️  HIGH: Line {}: Potential panic from unwrap() on user input", line_number));
-        }
-        if line.contains("Command::new") && line.contains("format!") {
-            issues.push(format!("🚨 CRITICAL: Line {}: Potential command injection vulnerability", line_number));
-        }
-        if line.contains("sk-") || line.contains("admin123") {
-            issues.push(format!("🚨 CRITICAL: Line {}: Hardcoded credentials detected", line_number));
+            issues.push(format!("🚨 CRITICAL [OWASP A06]: Line {}: Unsafe code blocks detected - requires careful review for memory safety", line_number));
         }
         if line.contains("std::ptr::null_mut") {
             issues.push(format!("🚨 CRITICAL: Line {}: Dangerous null pointer manipulation", line_number));
         }
+        if line.contains("std::mem::transmute") {
+            issues.push(format!("🚨 CRITICAL: Line {}: Unsafe memory transmutation", line_number));
+        }
+        
+        // Input Validation & Injection Prevention
+        if line.contains("unwrap()") && line.contains("std::env::args()") {
+            issues.push(format!("⚠️  HIGH [OWASP A03]: Line {}: Potential panic from unwrap() on user input", line_number));
+        }
+        if line.contains("Command::new") && line.contains("format!") {
+            issues.push(format!("🚨 CRITICAL [OWASP A03]: Line {}: Potential command injection vulnerability", line_number));
+        }
+        if line.contains("process::Command") && (line.contains("&user_input") || line.contains("&args")) {
+            issues.push(format!("🚨 CRITICAL [OWASP A03]: Line {}: Command injection risk with user input", line_number));
+        }
+        
+        // Cryptographic Issues
+        if line.contains("sk-") || line.contains("admin123") || line.contains("secret123") {
+            issues.push(format!("🚨 CRITICAL [OWASP A02]: Line {}: Hardcoded credentials detected", line_number));
+        }
+        if line.contains("md5") || line.contains("sha1") {
+            issues.push(format!("🚨 CRITICAL [OWASP A02]: Line {}: Weak cryptographic hash function", line_number));
+        }
+        if line.contains("const SECRET") || line.contains("const API_KEY") {
+            if line.contains("=") && line.contains("\"") {
+                issues.push(format!("🚨 CRITICAL [OWASP A02]: Line {}: Hardcoded secrets in source code", line_number));
+            }
+        }
+        
+        // Path Traversal & File System Security
         if line.contains("../../../") {
-            issues.push(format!("⚠️  HIGH: Line {}: Potential path traversal vulnerability", line_number));
+            issues.push(format!("⚠️  HIGH [OWASP A01]: Line {}: Potential path traversal vulnerability", line_number));
+        }
+        if line.contains("std::fs::File::open") && line.contains("&user_input") {
+            issues.push(format!("⚠️  HIGH [OWASP A01]: Line {}: File access with unvalidated user input", line_number));
+        }
+        
+        // Deserialization Security
+        if line.contains("serde") && line.contains("from_str") && line.contains("unwrap") {
+            issues.push(format!("⚠️  HIGH [OWASP A08]: Line {}: Unsafe deserialization without error handling", line_number));
+        }
+        if line.contains("bincode::deserialize") && !line.contains("validate") {
+            issues.push(format!("⚠️  HIGH [OWASP A08]: Line {}: Binary deserialization without validation", line_number));
+        }
+        
+        // Network Security
+        if line.contains("reqwest::get") && line.contains("&url") && !line.contains("validate") {
+            issues.push(format!("⚠️  HIGH [OWASP A10]: Line {}: SSRF vulnerability - unvalidated URL request", line_number));
+        }
+        if line.contains("TcpStream::connect") && line.contains("&address") {
+            issues.push(format!("⚠️  MEDIUM [OWASP A10]: Line {}: Network connection with user-controlled address", line_number));
+        }
+        
+        // SQL Injection (if using raw SQL)
+        if line.contains("format!") && line.contains("SELECT") && line.contains("WHERE") {
+            issues.push(format!("🚨 CRITICAL [OWASP A03]: Line {}: SQL injection vulnerability via string formatting", line_number));
+        }
+        
+        // Information Disclosure
+        if line.contains("panic!") && line.contains("&secret") {
+            issues.push(format!("⚠️  HIGH [OWASP A09]: Line {}: Potential information disclosure in panic message", line_number));
+        }
+        if line.contains("println!") && (line.contains("password") || line.contains("token") || line.contains("secret")) {
+            issues.push(format!("⚠️  HIGH [OWASP A09]: Line {}: Logging sensitive information", line_number));
+        }
+        
+        // Integer Overflow/Underflow
+        if line.contains(".wrapping_add") || line.contains(".wrapping_sub") {
+            issues.push(format!("⚠️  MEDIUM: Line {}: Explicit wrapping arithmetic - verify overflow handling", line_number));
+        }
+        if line.contains("as u32") && line.contains("user_input") {
+            issues.push(format!("⚠️  MEDIUM: Line {}: Unchecked type conversion from user input", line_number));
+        }
+        
+        // Concurrency Issues
+        if line.contains("Arc::new") && line.contains("Mutex::new") && !line.contains("timeout") {
+            issues.push(format!("⚠️  MEDIUM: Line {}: Shared mutable state without timeout protection", line_number));
+        }
+        if line.contains("thread::spawn") && line.contains("user_data") {
+            issues.push(format!("⚠️  MEDIUM: Line {}: Threading with user data - verify data safety", line_number));
         }
         
         // Performance analysis
         if line.contains("String::new()") && target.contains("result = result +") {
             issues.push(format!("⚠️  MEDIUM: Line {}: Inefficient string concatenation pattern", line_number));
         }
+        if line.contains(".clone()") && line.contains("loop") {
+            issues.push(format!("⚠️  MEDIUM: Line {}: Expensive cloning in loop", line_number));
+        }
         
         // Code quality
         if line.contains("let unused_var =") || line.contains("let _another_unused =") {
             issues.push(format!("📝 LOW: Line {}: Unused variables detected", line_number));
         }
+        if line.contains("todo!()") || line.contains("unimplemented!()") {
+            issues.push(format!("⚠️  HIGH: Line {}: Unimplemented code in production", line_number));
+        }
+        
+        // Resource Management
+        if line.contains("Box::leak") {
+            issues.push(format!("⚠️  HIGH: Line {}: Intentional memory leak detected", line_number));
+        }
+        if line.contains("std::mem::forget") {
+            issues.push(format!("⚠️  HIGH: Line {}: Manual memory management bypass", line_number));
+        }
     }
     
     if issues.is_empty() {
-        format!("• {}: No significant issues detected\n", path)
+        format!("• {}: No significant OWASP or security issues detected\n", path)
     } else {
         format!("• {}:\n{}\n", path, issues.iter().map(|i| format!("  {}", i)).collect::<Vec<_>>().join("\n"))
     }
@@ -116,24 +303,134 @@ fn analyze_js_changes(path: &str, _source: &str, target: &str) -> String {
     let mut issues = Vec::new();
     let lines: Vec<&str> = target.lines().collect();
     
-    // Security analysis with line numbers
+    // OWASP Top 10 & Security analysis with line numbers
     for (line_num, line) in lines.iter().enumerate() {
         let line_number = line_num + 1;
         
+        // OWASP A01: Broken Access Control
+        if line.contains("SELECT * FROM users WHERE id =") && line.contains("${") {
+            issues.push(format!("🚨 CRITICAL [OWASP A01]: Line {}: Insecure Direct Object Reference", line_number));
+        }
+        if line.contains("/admin/") && !line.contains("authorization") && !line.contains("isAdmin") {
+            issues.push(format!("🚨 CRITICAL [OWASP A01]: Line {}: Missing authorization check for admin endpoint", line_number));
+        }
+        if line.contains("../") && (line.contains("req.params") || line.contains("req.query")) {
+            issues.push(format!("🚨 CRITICAL [OWASP A01]: Line {}: Path traversal vulnerability", line_number));
+        }
+        
+        // OWASP A02: Cryptographic Failures
+        if line.contains("md5") || line.contains("sha1") {
+            issues.push(format!("🚨 CRITICAL [OWASP A02]: Line {}: Weak cryptographic algorithm", line_number));
+        }
+        if line.contains("API_KEY") || line.contains("SECRET") || line.contains("PASSWORD") {
+            if line.contains("=") && (line.contains("\"") || line.contains("'")) {
+                issues.push(format!("🚨 CRITICAL [OWASP A02]: Line {}: Hardcoded secrets/credentials", line_number));
+            }
+        }
+        if line.contains("localStorage.setItem") && (line.contains("password") || line.contains("token")) {
+            issues.push(format!("⚠️  HIGH [OWASP A02]: Line {}: Insecure storage of sensitive data", line_number));
+        }
+        
+        // OWASP A03: Injection
         if line.contains("eval(") {
-            issues.push(format!("🚨 CRITICAL: Line {}: Code injection vulnerability via eval()", line_number));
+            issues.push(format!("🚨 CRITICAL [OWASP A03]: Line {}: Code injection vulnerability via eval()", line_number));
         }
-        if line.contains("innerHTML =") && line.contains("userInput") {
-            issues.push(format!("🚨 CRITICAL: Line {}: XSS vulnerability via innerHTML", line_number));
+        if line.contains("SELECT") && line.contains("${") && !line.contains("prepared") {
+            issues.push(format!("🚨 CRITICAL [OWASP A03]: Line {}: SQL injection vulnerability", line_number));
         }
-        if line.contains("window.location =") && line.contains("userInput") {
+        if line.contains("exec(") && line.contains("${") {
+            issues.push(format!("🚨 CRITICAL [OWASP A03]: Line {}: Command injection vulnerability", line_number));
+        }
+        if line.contains("innerHTML") && (line.contains("req.") || line.contains("userInput") || line.contains("params")) {
+            issues.push(format!("🚨 CRITICAL [OWASP A03]: Line {}: DOM-based XSS vulnerability", line_number));
+        }
+        if line.contains("document.write") && line.contains("location.search") {
+            issues.push(format!("🚨 CRITICAL [OWASP A03]: Line {}: Reflected XSS vulnerability", line_number));
+        }
+        
+        // OWASP A04: Insecure Design
+        if line.contains("/api/login") && !target.contains("rate") && !target.contains("limit") {
+            issues.push(format!("⚠️  HIGH [OWASP A04]: Line {}: Missing rate limiting on authentication endpoint", line_number));
+        }
+        if line.contains("cors") && line.contains("origin: '*'") {
+            issues.push(format!("⚠️  HIGH [OWASP A04]: Line {}: Overly permissive CORS configuration", line_number));
+        }
+        
+        // OWASP A05: Security Misconfiguration
+        if line.contains("DEBUG = true") || line.contains("debug: true") {
+            issues.push(format!("⚠️  HIGH [OWASP A05]: Line {}: Debug mode enabled in production", line_number));
+        }
+        if line.contains("secure: false") || line.contains("httpOnly: false") {
+            issues.push(format!("⚠️  HIGH [OWASP A05]: Line {}: Insecure cookie configuration", line_number));
+        }
+        if (line.contains("username") && line.contains("admin")) && (line.contains("password") && line.contains("admin")) {
+            issues.push(format!("🚨 CRITICAL [OWASP A05]: Line {}: Default credentials detected", line_number));
+        }
+        
+        // OWASP A07: Identification and Authentication Failures
+        if line.contains("password.length") && line.contains(">=") {
+            if let Some(num_str) = line.split(">=").nth(1) {
+                if let Ok(min_length) = num_str.trim().parse::<i32>() {
+                    if min_length < 8 {
+                        issues.push(format!("⚠️  HIGH [OWASP A07]: Line {}: Weak password policy (minimum {} characters)", line_number, min_length));
+                    }
+                }
+            }
+        }
+        if line.contains("session.user") && !target.contains("session.regenerate") {
+            issues.push(format!("⚠️  MEDIUM [OWASP A07]: Line {}: Potential session fixation vulnerability", line_number));
+        }
+        
+        // OWASP A08: Software and Data Integrity Failures
+        if line.contains("eval('(") && line.contains("serializedData") {
+            issues.push(format!("🚨 CRITICAL [OWASP A08]: Line {}: Insecure deserialization using eval()", line_number));
+        }
+        if line.contains("fetch(url)") && line.contains("eval") {
+            issues.push(format!("🚨 CRITICAL [OWASP A08]: Line {}: Remote code execution via fetch and eval", line_number));
+        }
+        
+        // OWASP A09: Security Logging and Monitoring Failures
+        if line.contains("console.log") && (line.contains("password") || line.contains("token") || line.contains("secret")) {
+            issues.push(format!("⚠️  HIGH [OWASP A09]: Line {}: Logging sensitive information", line_number));
+        }
+        if line.contains("DELETE FROM") && !line.contains("log") && !line.contains("audit") {
+            issues.push(format!("⚠️  MEDIUM [OWASP A09]: Line {}: Missing audit logging for sensitive operation", line_number));
+        }
+        
+        // OWASP A10: Server-Side Request Forgery (SSRF)
+        if line.contains("fetch(") && line.contains("req.query") && !line.contains("validate") {
+            issues.push(format!("🚨 CRITICAL [OWASP A10]: Line {}: Server-Side Request Forgery (SSRF)", line_number));
+        }
+        if line.contains("http://internal") || line.contains("localhost") {
+            issues.push(format!("⚠️  HIGH [OWASP A10]: Line {}: Potential SSRF to internal services", line_number));
+        }
+        
+        // Additional XSS variants
+        if line.contains("window.location") && (line.contains("req.") || line.contains("userInput")) {
             issues.push(format!("⚠️  HIGH: Line {}: Open redirect vulnerability", line_number));
         }
-        if line.contains("secret-api-key") || line.contains("API_KEY =") {
-            issues.push(format!("🚨 CRITICAL: Line {}: Hardcoded API credentials", line_number));
+        if line.contains("document.body.innerHTML") && line.contains("location.search") {
+            issues.push(format!("🚨 CRITICAL: Line {}: DOM-based XSS via URL parameters", line_number));
         }
-        if line.contains("SELECT * FROM") && line.contains("${userId}") {
-            issues.push(format!("🚨 CRITICAL: Line {}: SQL injection vulnerability", line_number));
+        
+        // Race Conditions
+        if line.contains("setTimeout") && (line.contains("balance") || line.contains("account")) {
+            issues.push(format!("⚠️  HIGH: Line {}: Potential race condition in financial operation", line_number));
+        }
+        
+        // Prototype Pollution
+        if line.contains("for") && line.contains("in") && line.contains("target[key] = source[key]") {
+            issues.push(format!("🚨 CRITICAL: Line {}: Prototype pollution vulnerability", line_number));
+        }
+        
+        // Regular Expression DoS (ReDoS)
+        if line.contains("*") && line.contains("+") && line.contains(".*") {
+            issues.push(format!("⚠️  MEDIUM: Line {}: Potential ReDoS vulnerability in regex", line_number));
+        }
+        
+        // Time-based attacks
+        if line.contains("for") && line.contains("provided[i]") && line.contains("stored[i]") {
+            issues.push(format!("⚠️  MEDIUM: Line {}: Timing attack vulnerability in comparison", line_number));
         }
         
         // Performance analysis
@@ -142,16 +439,21 @@ fn analyze_js_changes(path: &str, _source: &str, target: &str) -> String {
         }
         
         // Code quality
-        if line.contains("console.log") {
-            issues.push(format!("📝 MEDIUM: Line {}: Debug logging may leak sensitive information", line_number));
+        if line.contains("console.log") && !line.contains("password") && !line.contains("token") {
+            issues.push(format!("📝 MEDIUM: Line {}: Debug logging in production code", line_number));
         }
         if line.contains("var unused_var") {
             issues.push(format!("📝 LOW: Line {}: Unused variables detected", line_number));
         }
+        
+        // Information disclosure
+        if line.contains("err.stack") || line.contains("process.env") {
+            issues.push(format!("⚠️  HIGH: Line {}: Information disclosure in error handling", line_number));
+        }
     }
     
     if issues.is_empty() {
-        format!("• {}: No significant issues detected\n", path)
+        format!("• {}: No significant OWASP or security issues detected\n", path)
     } else {
         format!("• {}:\n{}\n", path, issues.iter().map(|i| format!("  {}", i)).collect::<Vec<_>>().join("\n"))
     }
@@ -189,33 +491,182 @@ fn create_ai_analysis_prompt(file_changes: &[(String, String, String)]) -> Strin
     prompt
 }
 
+#[derive(Debug, Clone)]
+struct Contributor {
+    name: String,
+    email: String,
+    commit_count: usize,
+    first_commit_date: String,
+    last_commit_date: String,
+}
+
+async fn show_credits(repo_path: &str) -> anyhow::Result<()> {
+    println!("🎉 AI Code Buddy - Credits & Contributors");
+    println!("==========================================");
+    println!();
+    
+    println!("📚 About AI Code Buddy:");
+    println!("AI Code Buddy is an intelligent code analysis tool that combines");
+    println!("advanced pattern matching with AI-powered analysis to provide");
+    println!("comprehensive code reviews with precise line-by-line feedback.");
+    println!();
+    
+    // Get contributors from git history
+    if let Ok(contributors) = get_contributors(repo_path) {
+        if !contributors.is_empty() {
+            println!("👥 Contributors to this project:");
+            println!("==========================================");
+            
+            // Sort by commit count (descending)
+            let mut sorted_contributors = contributors;
+            sorted_contributors.sort_by(|a, b| b.commit_count.cmp(&a.commit_count));
+            
+            for (i, contributor) in sorted_contributors.iter().enumerate() {
+                let rank_icon = match i {
+                    0 => "🥇",
+                    1 => "🥈", 
+                    2 => "🥉",
+                    _ => "👨‍💻",
+                };
+                
+                println!("{} {} <{}>", rank_icon, contributor.name, contributor.email);
+                println!("   📊 {} commits", contributor.commit_count);
+                println!("   📅 First contribution: {}", contributor.first_commit_date);
+                println!("   📅 Latest contribution: {}", contributor.last_commit_date);
+                println!();
+            }
+            
+            let total_commits: usize = sorted_contributors.iter().map(|c| c.commit_count).sum();
+            println!("📈 Total commits: {}", total_commits);
+            println!("👥 Total contributors: {}", sorted_contributors.len());
+        } else {
+            println!("⚠️  No contributors found in git history");
+        }
+    } else {
+        println!("⚠️  Could not access git repository for contributor information");
+    }
+    
+    println!();
+    println!("🙏 Thank you to all contributors who made this project possible!");
+    println!("💡 Want to contribute? Visit: https://github.com/edgarhsanchez/ai_code_buddy");
+    println!();
+    println!("🔧 Built with:");
+    println!("  • Rust 🦀 - Systems programming language");
+    println!("  • Kalosm - AI/ML framework");  
+    println!("  • Git2 - Git repository analysis");
+    println!("  • Clap - Command-line argument parsing");
+    println!("  • Tokio - Async runtime");
+    
+    Ok(())
+}
+
+fn get_contributors(repo_path: &str) -> anyhow::Result<Vec<Contributor>> {
+    use std::collections::HashMap;
+    
+    // We'll use git2 directly to get all commits and contributors
+    let repo = git2::Repository::open(repo_path)?;
+    let mut revwalk = repo.revwalk()?;
+    
+    // Start from HEAD
+    let head = repo.head()?;
+    revwalk.push(head.target().unwrap())?;
+    revwalk.set_sorting(git2::Sort::TIME)?;
+    
+    let mut contributors: HashMap<String, Contributor> = HashMap::new();
+    
+    for oid in revwalk {
+        let oid = oid?;
+        let commit = repo.find_commit(oid)?;
+        
+        let author = commit.author();
+        let name = author.name().unwrap_or("Unknown").to_string();
+        let email = author.email().unwrap_or("unknown@example.com").to_string();
+        let commit_time = commit.time();
+        let commit_date = chrono::DateTime::from_timestamp(commit_time.seconds(), 0)
+            .unwrap_or_default()
+            .format("%Y-%m-%d")
+            .to_string();
+        
+        // Use email as primary key for deduplication, but prefer longer names
+        let key = email.clone();
+        
+        contributors.entry(key).and_modify(|contributor| {
+            contributor.commit_count += 1;
+            // Use the longer/more complete name
+            if name.len() > contributor.name.len() {
+                contributor.name = name.clone();
+            }
+            // Update first commit (earlier date)
+            if commit_date < contributor.first_commit_date {
+                contributor.first_commit_date = commit_date.clone();
+            }
+            // Update last commit (later date) 
+            if commit_date > contributor.last_commit_date {
+                contributor.last_commit_date = commit_date.clone();
+            }
+        }).or_insert(Contributor {
+            name: name.clone(),
+            email: email.clone(),
+            commit_count: 1,
+            first_commit_date: commit_date.clone(),
+            last_commit_date: commit_date,
+        });
+    }
+    
+    Ok(contributors.into_values().collect())
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let args: Vec<String> = std::env::args().collect();
+    let cli = Cli::parse();
 
-    // Parse command line arguments
-    let use_cli = args.contains(&"--cli".to_string());
+    // Handle credits flag first
+    if cli.show_credits {
+        show_credits(&cli.repo_path).await?;
+        return Ok(());
+    }
 
-    // Filter out flags when getting positional arguments
-    let pos_args: Vec<&String> = args.iter().filter(|arg| !arg.starts_with("--")).collect();
+    if cli.verbose {
+        println!("🔧 Verbose mode enabled");
+        println!("📂 Repository: {}", cli.repo_path);
+        println!("🌿 Source branch: {}", cli.source_branch);
+        println!("🎯 Target branch: {}", cli.target_branch);
+        println!("🖥️  Output format: {:?}", cli.output_format);
+    }
 
-    let repo_path = pos_args.get(1).map(|s| s.as_str()).unwrap_or(".");
-    let source_branch = pos_args.get(2).map(|s| s.as_str()).unwrap_or("main");
-    let target_branch = pos_args.get(3).map(|s| s.as_str()).unwrap_or("main");
+    println!("🔍 AI Code Review Tool v0.1.0");
+    println!("📂 Repository: {}", cli.repo_path);
+    println!("🌿 Comparing: {} → {}", cli.source_branch, cli.target_branch);
 
-    println!("🔍 AI Code Review Tool");
-    println!("📂 Repository: {repo_path}");
-    println!("🌿 Comparing: {source_branch} → {target_branch}");
+    // Create custom config if patterns are provided
+    let mut config = ReviewConfig::default();
+    if !cli.include_patterns.is_empty() {
+        config.include_patterns = cli.include_patterns;
+    }
+    if !cli.exclude_patterns.is_empty() {
+        config.exclude_patterns.extend(cli.exclude_patterns);
+    }
 
     // Perform code analysis
-    let review = perform_code_analysis(source_branch, target_branch, repo_path).await?;
+    let review = perform_code_analysis(
+        &cli.source_branch,
+        &cli.target_branch,
+        &cli.repo_path,
+        &config,
+    ).await?;
 
-    if use_cli {
-        // CLI mode - print report and exit
-        print_cli_summary(&review);
-    } else {
-        // Interactive TUI mode
-        run_tui(review).await?;
+    // Output results based on format
+    match cli.output_format {
+        OutputFormat::Summary => {
+            if cli.cli_mode {
+                print_cli_summary(&review);
+            } else {
+                run_tui(review).await?;
+            }
+        }
+        OutputFormat::Detailed => print_detailed_summary(&review),
+        OutputFormat::Json => print_json_output(&review)?,
+        OutputFormat::Markdown => print_markdown_output(&review),
     }
 
     Ok(())
@@ -225,8 +676,8 @@ async fn perform_code_analysis(
     source_branch: &str,
     target_branch: &str,
     repo_path: &str,
+    config: &ReviewConfig,
 ) -> anyhow::Result<Review> {
-    let config = ReviewConfig::default();
     let mut review = Review::default();
     review.branch_comparison.source_branch = source_branch.to_string();
     review.branch_comparison.target_branch = target_branch.to_string();
@@ -279,7 +730,7 @@ async fn perform_code_analysis(
     println!("✅ Analysis complete! Found {issue_count} issues.");
 
     // Generate AI assessment
-    let ai_assessment = generate_ai_assessment(&review).await;
+    let ai_assessment = generate_ai_assessment(&review, &config).await;
     review.overall_assessment =
         ai_assessment.unwrap_or_else(|e| format!("AI assessment unavailable: {e}"));
 
@@ -290,50 +741,68 @@ async fn perform_code_analysis(
 }
 
 fn should_analyze_file(file_path: &str, config: &ReviewConfig) -> bool {
-    // Check include patterns
-    let include_match = config
-        .include_patterns
-        .iter()
-        .any(|pattern| match pattern.as_str() {
-            "*.rs" => file_path.ends_with(".rs"),
-            "*.py" => file_path.ends_with(".py"),
-            "*.js" => file_path.ends_with(".js"),
-            "*.ts" => file_path.ends_with(".ts"),
-            "*.java" => file_path.ends_with(".java"),
-            "*.cpp" | "*.cc" | "*.cxx" => {
-                file_path.ends_with(".cpp")
-                    || file_path.ends_with(".cc")
-                    || file_path.ends_with(".cxx")
-            }
-            "*.c" => file_path.ends_with(".c"),
-            "*.h" => file_path.ends_with(".h"),
-            "*.go" => file_path.ends_with(".go"),
-            _ => false,
-        });
+    // Check include patterns - if specified, file must match at least one
+    if !config.include_patterns.is_empty() {
+        let include_match = config
+            .include_patterns
+            .iter()
+            .any(|pattern| {
+                // Try glob pattern first
+                if let Ok(glob_pattern) = Pattern::new(pattern) {
+                    glob_pattern.matches(file_path)
+                } else {
+                    // Fallback to simple extension matching
+                    match pattern.as_str() {
+                        "*.rs" => file_path.ends_with(".rs"),
+                        "*.py" => file_path.ends_with(".py"),
+                        "*.js" => file_path.ends_with(".js"),
+                        "*.ts" => file_path.ends_with(".ts"),
+                        "*.java" => file_path.ends_with(".java"),
+                        "*.cpp" | "*.cc" | "*.cxx" => {
+                            file_path.ends_with(".cpp")
+                                || file_path.ends_with(".cc")
+                                || file_path.ends_with(".cxx")
+                        }
+                        "*.c" => file_path.ends_with(".c"),
+                        "*.h" => file_path.ends_with(".h"),
+                        "*.go" => file_path.ends_with(".go"),
+                        _ => false,
+                    }
+                }
+            });
 
-    if !include_match {
-        return false;
+        if !include_match {
+            return false;
+        }
     }
 
-    // Check exclude patterns
+    // Check exclude patterns - if file matches any exclude pattern, skip it
     for pattern in &config.exclude_patterns {
-        match pattern.as_str() {
-            "target/**" => {
-                if file_path.starts_with("target/") {
-                    return false;
-                }
+        // Try glob pattern first
+        if let Ok(glob_pattern) = Pattern::new(pattern) {
+            if glob_pattern.matches(file_path) {
+                return false;
             }
-            "node_modules/**" => {
-                if file_path.contains("node_modules/") {
-                    return false;
+        } else {
+            // Fallback to hardcoded patterns for backward compatibility
+            match pattern.as_str() {
+                "target/**" => {
+                    if file_path.starts_with("target/") {
+                        return false;
+                    }
                 }
-            }
-            "*.test.*" | "*.spec.*" => {
-                if file_path.contains(".test.") || file_path.contains(".spec.") {
-                    return false;
+                "node_modules/**" => {
+                    if file_path.contains("node_modules/") {
+                        return false;
+                    }
                 }
+                "*.test.*" | "*.spec.*" => {
+                    if file_path.contains(".test.") || file_path.contains(".spec.") {
+                        return false;
+                    }
+                }
+                _ => {}
             }
-            _ => {}
         }
     }
 
@@ -358,7 +827,7 @@ fn detect_language(file_path: &str) -> String {
     }
 }
 
-async fn generate_ai_assessment(review: &Review) -> anyhow::Result<String> {
+async fn generate_ai_assessment(review: &Review, config: &ReviewConfig) -> anyhow::Result<String> {
     println!("🤖 Attempting AI-powered analysis...");
     
     // Try to get actual file changes for AI analysis
@@ -369,9 +838,14 @@ async fn generate_ai_assessment(review: &Review) -> anyhow::Result<String> {
         ) {
             let changed_files = changed_files.1;
             
-            // Get file contents for analysis
+            // Get file contents for analysis, applying include/exclude filters
             let mut file_contents = Vec::new();
             for file_path in &changed_files {
+                // Apply the same filtering logic as the main analysis
+                if !should_analyze_file(file_path, config) {
+                    continue;
+                }
+                
                 // For new files, source content will be empty
                 let source_content = git_analyzer.get_file_content_at_commit(file_path, &review.branch_comparison.source_branch)
                     .unwrap_or_else(|_| String::new());
@@ -530,4 +1004,108 @@ fn print_cli_summary(review: &Review) {
 
     println!("\n💻 To view detailed analysis, run without --cli flag for interactive mode");
     println!("📄 Generate reports using the interactive mode");
+}
+
+fn print_detailed_summary(review: &Review) {
+    print_cli_summary(review);
+    
+    println!("\n🔍 Detailed Issue Analysis:");
+    println!("==========================================");
+    
+    for (category, issues) in &review.issues {
+        if !issues.is_empty() {
+            println!("\n📂 {:?} Issues ({} total):", category, issues.len());
+            for (i, issue) in issues.iter().enumerate() {
+                let severity_icon = match issue.severity {
+                    Severity::Critical => "🚨",
+                    Severity::High => "⚠️",
+                    Severity::Medium => "🔶",
+                    Severity::Low => "ℹ️",
+                    Severity::Info => "💡",
+                };
+                
+                println!("  {}. {} {} {}", 
+                    i + 1,
+                    severity_icon, 
+                    issue.file_path,
+                    if let Some(line) = issue.line_number {
+                        format!(":{line}")
+                    } else {
+                        String::new()
+                    }
+                );
+                println!("     {}", issue.description);
+                if !issue.suggestion.is_empty() {
+                    println!("     💡 Suggestion: {}", issue.suggestion);
+                }
+                println!();
+            }
+        }
+    }
+}
+
+fn print_json_output(review: &Review) -> anyhow::Result<()> {
+    use serde_json;
+    
+    let json_output = serde_json::to_string_pretty(review)?;
+    println!("{}", json_output);
+    Ok(())
+}
+
+fn print_markdown_output(review: &Review) {
+    println!("# Code Review Report");
+    println!();
+    println!("## Summary");
+    println!("- **Branches**: {} → {}", review.branch_comparison.source_branch, review.branch_comparison.target_branch);
+    println!("- **Files modified**: {}", review.metrics.files_modified);
+    println!("- **Lines added**: +{}", review.metrics.lines_added);
+    println!("- **Lines removed**: -{}", review.metrics.lines_removed);
+    println!("- **Total issues**: {}", review.total_issues());
+    println!();
+    
+    if !review.overall_assessment.is_empty() {
+        println!("## AI Assessment");
+        println!("{}", review.overall_assessment);
+        println!();
+    }
+    
+    println!("## Technology Stack");
+    if !review.technology_stack.programming_languages.is_empty() {
+        println!("**Languages**: {}", review.technology_stack.programming_languages.join(", "));
+    }
+    if !review.technology_stack.frameworks.is_empty() {
+        println!("**Frameworks**: {}", review.technology_stack.frameworks.join(", "));
+    }
+    if !review.technology_stack.tools.is_empty() {
+        println!("**Tools**: {}", review.technology_stack.tools.join(", "));
+    }
+    println!();
+    
+    println!("## Issues by Category");
+    for (category, issues) in &review.issues {
+        if !issues.is_empty() {
+            println!("### {:?} ({} issues)", category, issues.len());
+            for issue in issues {
+                let severity_icon = match issue.severity {
+                    Severity::Critical => "🚨",
+                    Severity::High => "⚠️",
+                    Severity::Medium => "🔶", 
+                    Severity::Low => "ℹ️",
+                    Severity::Info => "💡",
+                };
+                
+                println!("- {} **{}{}**: {}", 
+                    severity_icon,
+                    issue.file_path,
+                    if let Some(line) = issue.line_number {
+                        format!(":{line}")
+                    } else {
+                        String::new()
+                    },
+                    issue.description
+                );
+            }
+            println!();
+        }
+    }
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Release script for ai_buddy
+# Release script for ai_code_buddy
 # Usage: ./release.sh <version>
 
 set -e

@@ -91,6 +91,6 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ai_buddy-${{ matrix.target }}
+        name: ai_code_buddy-${{ matrix.target }}
         path: |
-          target/${{ matrix.target }}/release/ai_buddy${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          target/${{ matrix.target }}/release/ai_code_buddy${{ matrix.os == 'windows-latest' && '.exe' || '' }}

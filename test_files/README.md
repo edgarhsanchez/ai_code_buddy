@@ -8,6 +8,7 @@ This directory contains test files designed to validate the AI-powered code anal
 test_files/
 ├── javascript/
 │   ├── security_vulnerabilities.js    # Security issues (XSS, injection, etc.)
+│   ├── owasp_vulnerabilities.js       # OWASP Top 10 comprehensive test suite
 │   └── performance_issues.js          # Performance problems (memory leaks, blocking)
 ├── python/
 │   └── security_vulnerabilities.py    # Python security issues (SQLi, pickle, etc.)
@@ -19,6 +20,20 @@ test_files/
 ## Test Categories
 
 ### 🚨 Security Vulnerabilities
+
+#### OWASP Top 10 Coverage
+- **A01: Broken Access Control**: Insecure direct object references, missing authorization
+- **A02: Cryptographic Failures**: Hardcoded secrets, weak algorithms, insecure storage  
+- **A03: Injection**: SQL injection, command injection, XSS, code injection via eval()
+- **A04: Insecure Design**: Missing rate limiting, permissive CORS
+- **A05: Security Misconfiguration**: Debug mode, default credentials, insecure cookies
+- **A06: Vulnerable Components**: Memory safety issues, outdated dependencies
+- **A07: Authentication Failures**: Weak passwords, session fixation
+- **A08: Software Integrity Failures**: Insecure deserialization, missing integrity checks
+- **A09: Logging & Monitoring Failures**: Sensitive data logging, missing audit trails
+- **A10: Server-Side Request Forgery**: Unvalidated URLs, internal service exposure
+
+#### Classic Security Issues
 - **SQL Injection**: Direct query construction with user input
 - **Command Injection**: Shell command execution with user data
 - **XSS (Cross-Site Scripting)**: Unsafe DOM manipulation

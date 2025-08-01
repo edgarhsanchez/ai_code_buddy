@@ -897,9 +897,7 @@ async fn perform_code_analysis_with_branch_selection(
 
                     match ui_simple::run_branch_selector(repo_path).await {
                         Ok((selected_source, selected_target)) => {
-                            println!(
-                                "✅ Selected branches: {selected_source} → {selected_target}"
-                            );
+                            println!("✅ Selected branches: {selected_source} → {selected_target}");
                             perform_code_analysis(
                                 &selected_source,
                                 &selected_target,

@@ -1,6 +1,7 @@
 mod code_analyzer;
 mod git_analyzer;
 mod review;
+mod security_analysis;
 mod ui_simple;
 
 use code_analyzer::CodeAnalyzer;

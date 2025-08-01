@@ -52,10 +52,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.target }}
+    - name: Setup Rust toolchain
+      run: |
+        # Use system-installed Rust on self-hosted runner
+        rustup toolchain install stable
+        rustup default stable
+        rustup target add ${{ matrix.target }}
 
     - name: Install dependencies (macOS)
       run: |

@@ -21,10 +21,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: ${{ matrix.rust }}
+    - name: Setup Rust toolchain
+      run: |
+        # Use system-installed Rust on self-hosted runner
+        rustup toolchain install ${{ matrix.rust }}
+        rustup default ${{ matrix.rust }}
+        rustup component add rustfmt clippy
 
     - name: Cache dependencies
       uses: actions/cache@v4
@@ -61,10 +63,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.target }}
+    - name: Setup Rust toolchain
+      run: |
+        # Use system-installed Rust on self-hosted runner
+        rustup toolchain install stable
+        rustup default stable
+        rustup target add ${{ matrix.target }}
 
     - name: Cache dependencies
       uses: actions/cache@v4

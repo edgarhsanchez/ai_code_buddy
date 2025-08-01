@@ -82,6 +82,9 @@ jobs:
         echo "Building for target: ${{ matrix.target }}"
         echo "Runner architecture: $(uname -m)"
         
+        # Set required ARM64 features for ring crate compatibility
+        export RUSTFLAGS="-C target-feature=+aes,+sha2,+neon"
+        
         # Use native build for macOS ARM64
         cargo build --release
         cp target/release/ai-code-buddy ${{ matrix.asset_name }}
@@ -90,7 +93,6 @@ jobs:
         file ${{ matrix.asset_name }}
       env:
         CARGO_NET_RETRY: 10
-        RUSTFLAGS: "-C target-cpu=generic"
         OPENSSL_STATIC: "1"
         OPENSSL_NO_VENDOR: "1"
 

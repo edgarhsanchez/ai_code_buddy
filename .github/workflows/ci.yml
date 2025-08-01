@@ -68,7 +68,9 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Build binary
-      run: cargo build --release --target ${{ matrix.target }}
+      run: |
+        export RUSTFLAGS="-C target-feature=+aes,+sha2,+neon"
+        cargo build --release --target ${{ matrix.target }}
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

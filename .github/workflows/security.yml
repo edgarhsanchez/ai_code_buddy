@@ -12,7 +12,7 @@ on:
 jobs:
   security_audit:
     name: Security Audit
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
 
   dependency_check:
     name: Dependency Check
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
     - name: Checkout code
       uses: actions/checkout@v4

@@ -78,7 +78,17 @@ impl GitAnalyzer {
         Ok((metrics, changed_files))
     }
 
-    pub fn get_file_content_at_commit(&self, commit_id: &str, file_path: &str) -> Result<String> {
+    pub fn get_file_content_at_commit(&self, file_path: &str, branch_name: &str) -> Result<String> {
+        let commit = self.get_branch_commit(branch_name)?;
+        let tree = commit.tree()?;
+        let entry = tree.get_path(std::path::Path::new(file_path))?;
+        let blob = self.repo.find_blob(entry.id())?;
+
+        Ok(String::from_utf8_lossy(blob.content()).to_string())
+    }
+
+    #[allow(dead_code)]
+    pub fn get_file_content_at_commit_id(&self, commit_id: &str, file_path: &str) -> Result<String> {
         let oid = Oid::from_str(commit_id)?;
         let commit = self.repo.find_commit(oid)?;
         let tree = commit.tree()?;

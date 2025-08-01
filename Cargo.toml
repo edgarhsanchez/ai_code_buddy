@@ -1,6 +1,6 @@
 [package]
 name = "ai-code-buddy"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Edgar H. Sanchez <esanchez@m2iab.com>"]
 description = "An AI-powered code review tool that analyzes Git repositories and provides intelligent feedback"

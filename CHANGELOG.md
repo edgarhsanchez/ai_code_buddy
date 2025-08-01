@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2025-08-01
+
+### Fixed
+- **Code Formatting**: Resolved 76 linting issues with cargo clippy
+- **CI/CD Compatibility**: Fixed formatting inconsistencies causing build failures
+- **Import Organization**: Proper ordering of use statements in review.rs
+- **Code Quality**: Applied consistent formatting across all source files
+
 ## [0.1.1] - 2025-08-01
 
 ### Added

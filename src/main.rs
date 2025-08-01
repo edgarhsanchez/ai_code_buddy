@@ -14,7 +14,7 @@ use ui_simple::run_tui;
 #[derive(Parser)]
 #[command(
     name = "ai-code-buddy",
-    version = "0.1.1",
+    version = "0.1.2",
     about = "🤖 AI-powered code review tool that analyzes Git repositories",
     long_about = "AI Code Buddy is an intelligent code analysis tool that compares branches, \
                   detects security vulnerabilities, performance issues, and code quality problems. \
@@ -819,7 +819,7 @@ async fn main() -> anyhow::Result<()> {
         println!("🖥️  Output format: {:?}", cli.output_format);
     }
 
-    println!("🔍 AI Code Review Tool v0.1.1");
+    println!("🔍 AI Code Review Tool v0.1.2");
     println!("📂 Repository: {}", cli.repo_path);
     println!(
         "🌿 Comparing: {} → {}",

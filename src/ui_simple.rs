@@ -1,5 +1,5 @@
-use crate::review::{CodeIssue, IssueCategory, Review, Severity};
 use crate::git_analyzer::GitAnalyzer;
+use crate::review::{CodeIssue, IssueCategory, Review, Severity};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
@@ -10,12 +10,10 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{
-        Block, Borders, List, ListItem, ListState, Paragraph, Tabs, Wrap,
-    },
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Tabs, Wrap},
     Frame, Terminal,
 };
-use std::io::{stdout};
+use std::io::stdout;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppTab {
@@ -35,6 +33,7 @@ pub struct App {
     pub filtered_issues: Vec<usize>,
     pub selected_issue_index: usize,
     pub selected_file_index: usize,
+    #[allow(dead_code)]
     pub scroll_position: usize,
     pub issue_list_state: ListState,
     pub file_list_state: ListState,
@@ -42,6 +41,7 @@ pub struct App {
     pub status_message: Option<String>,
     pub selected_category: Option<IssueCategory>,
     pub selected_severity: Option<Severity>,
+    #[allow(dead_code)]
     pub help_scroll: usize,
 }
 
@@ -105,11 +105,11 @@ impl App {
                 let category_match = self
                     .selected_category
                     .as_ref()
-                    .map_or(true, |cat| &issue.category == cat);
+                    .is_none_or(|cat| &issue.category == cat);
                 let severity_match = self
                     .selected_severity
                     .as_ref()
-                    .map_or(true, |sev| &issue.severity == sev);
+                    .is_none_or(|sev| &issue.severity == sev);
                 category_match && severity_match
             })
             .map(|(idx, _)| idx)
@@ -118,10 +118,11 @@ impl App {
         if self.selected_issue_index >= self.filtered_issues.len() {
             self.selected_issue_index = 0;
         }
-        
+
         // Update list state
         if !self.filtered_issues.is_empty() {
-            self.issue_list_state.select(Some(self.selected_issue_index));
+            self.issue_list_state
+                .select(Some(self.selected_issue_index));
         } else {
             self.issue_list_state.select(None);
         }
@@ -129,8 +130,10 @@ impl App {
 
     pub fn next_issue(&mut self) {
         if !self.filtered_issues.is_empty() {
-            self.selected_issue_index = (self.selected_issue_index + 1) % self.filtered_issues.len();
-            self.issue_list_state.select(Some(self.selected_issue_index));
+            self.selected_issue_index =
+                (self.selected_issue_index + 1) % self.filtered_issues.len();
+            self.issue_list_state
+                .select(Some(self.selected_issue_index));
         }
     }
 
@@ -141,7 +144,8 @@ impl App {
             } else {
                 self.filtered_issues.len() - 1
             };
-            self.issue_list_state.select(Some(self.selected_issue_index));
+            self.issue_list_state
+                .select(Some(self.selected_issue_index));
         }
     }
 
@@ -200,7 +204,8 @@ impl App {
     }
 
     pub fn get_files(&self) -> Vec<String> {
-        let mut files: Vec<String> = self.review
+        let mut files: Vec<String> = self
+            .review
             .branch_comparison
             .commits_analyzed
             .iter()
@@ -209,7 +214,7 @@ impl App {
             .collect::<std::collections::HashSet<_>>()
             .into_iter()
             .collect();
-        
+
         // Sort files for consistent ordering
         files.sort();
         files
@@ -237,7 +242,8 @@ impl App {
             1 => {
                 let report = self.generate_review_report();
                 if std::fs::write("code_review_report.md", &report).is_ok() {
-                    self.status_message = Some("✅ Full report saved to code_review_report.md".to_string());
+                    self.status_message =
+                        Some("✅ Full report saved to code_review_report.md".to_string());
                 } else {
                     self.status_message = Some("❌ Failed to save report".to_string());
                 }
@@ -245,7 +251,8 @@ impl App {
             2 => {
                 let summary = generate_summary_report(self);
                 if std::fs::write("code_review_summary.md", &summary).is_ok() {
-                    self.status_message = Some("✅ Summary saved to code_review_summary.md".to_string());
+                    self.status_message =
+                        Some("✅ Summary saved to code_review_summary.md".to_string());
                 } else {
                     self.status_message = Some("❌ Failed to save summary".to_string());
                 }
@@ -253,9 +260,11 @@ impl App {
             3 => {
                 let critical_report = generate_critical_issues_report(self);
                 if std::fs::write("critical_issues.md", &critical_report).is_ok() {
-                    self.status_message = Some("✅ Critical issues report saved to critical_issues.md".to_string());
+                    self.status_message =
+                        Some("✅ Critical issues report saved to critical_issues.md".to_string());
                 } else {
-                    self.status_message = Some("❌ Failed to save critical issues report".to_string());
+                    self.status_message =
+                        Some("❌ Failed to save critical issues report".to_string());
                 }
             }
             _ => {}
@@ -324,6 +333,7 @@ pub struct BranchSelector {
     pub selecting_source: bool,
     pub source_list_state: ListState,
     pub target_list_state: ListState,
+    #[allow(dead_code)]
     pub repo_path: String,
 }
 
@@ -331,23 +341,23 @@ impl BranchSelector {
     pub fn new(repo_path: &str) -> anyhow::Result<Self> {
         let git_analyzer = GitAnalyzer::new(repo_path)?;
         let branches = git_analyzer.get_available_branches()?;
-        
+
         // Find default indices
         let mut source_index = 0;
         let target_index = if branches.len() > 1 { 1 } else { 0 };
-        
+
         // Try to set sensible defaults
         for (i, branch) in branches.iter().enumerate() {
             if branch == "main" || branch == "master" {
                 source_index = i;
             }
         }
-        
+
         let mut source_list_state = ListState::default();
         let mut target_list_state = ListState::default();
         source_list_state.select(Some(source_index));
         target_list_state.select(Some(target_index));
-        
+
         Ok(Self {
             branches,
             source_index,
@@ -358,43 +368,45 @@ impl BranchSelector {
             repo_path: repo_path.to_string(),
         })
     }
-    
+
     pub fn get_source_branch(&self) -> &str {
-        self.branches.get(self.source_index).map(|s| s.as_str()).unwrap_or("main")
+        self.branches
+            .get(self.source_index)
+            .map(|s| s.as_str())
+            .unwrap_or("main")
     }
-    
+
     pub fn get_target_branch(&self) -> &str {
-        self.branches.get(self.target_index).map(|s| s.as_str()).unwrap_or("HEAD")
+        self.branches
+            .get(self.target_index)
+            .map(|s| s.as_str())
+            .unwrap_or("HEAD")
     }
-    
+
     pub fn next_branch(&mut self) {
         if self.selecting_source {
             if self.source_index + 1 < self.branches.len() {
                 self.source_index += 1;
                 self.source_list_state.select(Some(self.source_index));
             }
-        } else {
-            if self.target_index + 1 < self.branches.len() {
-                self.target_index += 1;
-                self.target_list_state.select(Some(self.target_index));
-            }
+        } else if self.target_index + 1 < self.branches.len() {
+            self.target_index += 1;
+            self.target_list_state.select(Some(self.target_index));
         }
     }
-    
+
     pub fn prev_branch(&mut self) {
         if self.selecting_source {
             if self.source_index > 0 {
                 self.source_index -= 1;
                 self.source_list_state.select(Some(self.source_index));
             }
-        } else {
-            if self.target_index > 0 {
-                self.target_index -= 1;
-                self.target_list_state.select(Some(self.target_index));
-            }
+        } else if self.target_index > 0 {
+            self.target_index -= 1;
+            self.target_list_state.select(Some(self.target_index));
         }
     }
-    
+
     pub fn toggle_selection(&mut self) {
         self.selecting_source = !self.selecting_source;
     }
@@ -423,7 +435,7 @@ pub async fn run_branch_selector(repo_path: &str) -> anyhow::Result<(String, Str
     match result {
         Ok((source, target)) => Ok((source, target)),
         Err(err) => {
-            println!("Error in branch selector: {:?}", err);
+            println!("Error in branch selector: {err:?}");
             Err(err)
         }
     }
@@ -460,7 +472,7 @@ async fn run_branch_selector_app<B: Backend>(
 
 fn render_branch_selector(f: &mut Frame, selector: &BranchSelector) {
     let size = f.area();
-    
+
     // Create main layout
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -474,56 +486,71 @@ fn render_branch_selector(f: &mut Frame, selector: &BranchSelector) {
     // Title
     let title = Paragraph::new("🌿 Branch Selection - Choose Source and Target Branches")
         .block(Block::default().borders(Borders::ALL))
-        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD));
+        .style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        );
     f.render_widget(title, chunks[0]);
 
     // Content - split into two columns
     let content_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
-        ])
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(chunks[1]);
 
     // Source branch list
-    let source_items: Vec<ListItem> = selector.branches
+    let source_items: Vec<ListItem> = selector
+        .branches
         .iter()
         .map(|branch| ListItem::new(branch.as_str()))
         .collect();
 
     let source_list = List::new(source_items)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .title("📤 Source Branch")
-            .border_style(if selector.selecting_source {
-                Style::default().fg(Color::Yellow)
-            } else {
-                Style::default().fg(Color::White)
-            }))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("📤 Source Branch")
+                .border_style(if selector.selecting_source {
+                    Style::default().fg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::White)
+                }),
+        )
         .highlight_style(Style::default().bg(Color::DarkGray))
         .highlight_symbol("► ");
 
     // Target branch list
-    let target_items: Vec<ListItem> = selector.branches
+    let target_items: Vec<ListItem> = selector
+        .branches
         .iter()
         .map(|branch| ListItem::new(branch.as_str()))
         .collect();
 
     let target_list = List::new(target_items)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .title("📥 Target Branch")
-            .border_style(if !selector.selecting_source {
-                Style::default().fg(Color::Yellow)
-            } else {
-                Style::default().fg(Color::White)
-            }))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("📥 Target Branch")
+                .border_style(if !selector.selecting_source {
+                    Style::default().fg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::White)
+                }),
+        )
         .highlight_style(Style::default().bg(Color::DarkGray))
         .highlight_symbol("► ");
 
-    f.render_stateful_widget(source_list, content_chunks[0], &mut selector.source_list_state.clone());
-    f.render_stateful_widget(target_list, content_chunks[1], &mut selector.target_list_state.clone());
+    f.render_stateful_widget(
+        source_list,
+        content_chunks[0],
+        &mut selector.source_list_state.clone(),
+    );
+    f.render_stateful_widget(
+        target_list,
+        content_chunks[1],
+        &mut selector.target_list_state.clone(),
+    );
 
     // Instructions
     let instructions = Paragraph::new(vec![
@@ -558,17 +585,14 @@ pub async fn run_tui(review: Review) -> anyhow::Result<()> {
     terminal.show_cursor()?;
 
     if let Err(err) = res {
-        println!("{:?}", err);
+        println!("{err:?}");
     }
 
     Ok(())
 }
 
 // Add missing run_app function
-async fn run_app<B: Backend>(
-    terminal: &mut Terminal<B>,
-    app: &mut App,
-) -> anyhow::Result<()> {
+async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Result<()> {
     loop {
         terminal.draw(|f| ui(f, app))?;
 
@@ -587,28 +611,24 @@ async fn run_app<B: Backend>(
                     KeyCode::Char('f') => {
                         app.current_tab = AppTab::Files;
                         app.ensure_file_list_initialized();
-                    },
+                    }
                     KeyCode::Char('r') => app.current_tab = AppTab::Reports,
-                    KeyCode::Up | KeyCode::Char('k') => {
-                        match app.current_tab {
-                            AppTab::Issues => app.prev_issue(),
-                            AppTab::Files => {
-                                app.ensure_file_list_initialized();
-                                app.prev_file();
-                            },
-                            _ => {}
+                    KeyCode::Up | KeyCode::Char('k') => match app.current_tab {
+                        AppTab::Issues => app.prev_issue(),
+                        AppTab::Files => {
+                            app.ensure_file_list_initialized();
+                            app.prev_file();
                         }
-                    }
-                    KeyCode::Down | KeyCode::Char('j') => {
-                        match app.current_tab {
-                            AppTab::Issues => app.next_issue(),
-                            AppTab::Files => {
-                                app.ensure_file_list_initialized();
-                                app.next_file();
-                            },
-                            _ => {}
+                        _ => {}
+                    },
+                    KeyCode::Down | KeyCode::Char('j') => match app.current_tab {
+                        AppTab::Issues => app.next_issue(),
+                        AppTab::Files => {
+                            app.ensure_file_list_initialized();
+                            app.next_file();
                         }
-                    }
+                        _ => {}
+                    },
                     KeyCode::Enter => {
                         if app.current_tab == AppTab::Issues {
                             app.show_issue_detail = !app.show_issue_detail;
@@ -646,7 +666,7 @@ async fn run_app<B: Backend>(
 // Add missing UI function
 fn ui(f: &mut Frame, app: &mut App) {
     let size = f.area();
-    
+
     // Create main layout
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -659,7 +679,7 @@ fn ui(f: &mut Frame, app: &mut App) {
 
     // Render header with tabs
     render_header(f, chunks[0], app);
-    
+
     // Render main content based on current tab
     match app.current_tab {
         AppTab::Overview => render_overview(f, chunks[1], app),
@@ -668,7 +688,7 @@ fn ui(f: &mut Frame, app: &mut App) {
         AppTab::Reports => render_reports(f, chunks[1], app),
         AppTab::Help => render_help(f, chunks[1], app),
     }
-    
+
     // Render status bar
     render_status_bar(f, chunks[2], app);
 }
@@ -682,33 +702,56 @@ fn render_header(f: &mut Frame, area: Rect, app: &App) {
         AppTab::Reports => 3,
         AppTab::Help => 4,
     };
-    
+
     let tabs = Tabs::new(titles)
-        .block(Block::default().borders(Borders::ALL).title("AI Code Buddy"))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("AI Code Buddy"),
+        )
         .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        .highlight_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
         .select(index);
-    
+
     f.render_widget(tabs, area);
 }
 
 fn render_overview(f: &mut Frame, area: Rect, app: &App) {
     let text = vec![
-        Line::from(vec![Span::styled("📊 Code Review Overview", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled(
+            "📊 Code Review Overview",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(""),
-        Line::from(format!("🌿 Branches: {} → {}", 
-            app.review.branch_comparison.source_branch,
-            app.review.branch_comparison.target_branch)),
-        Line::from(format!("📁 Files Modified: {}", app.review.metrics.files_modified)),
-        Line::from(format!("➕ Lines Added: +{}", app.review.metrics.lines_added)),
-        Line::from(format!("➖ Lines Removed: -{}", app.review.metrics.lines_removed)),
+        Line::from(format!(
+            "🌿 Branches: {} → {}",
+            app.review.branch_comparison.source_branch, app.review.branch_comparison.target_branch
+        )),
+        Line::from(format!(
+            "📁 Files Modified: {}",
+            app.review.metrics.files_modified
+        )),
+        Line::from(format!(
+            "➕ Lines Added: +{}",
+            app.review.metrics.lines_added
+        )),
+        Line::from(format!(
+            "➖ Lines Removed: -{}",
+            app.review.metrics.lines_removed
+        )),
         Line::from(format!("🐛 Total Issues: {}", app.all_issues.len())),
     ];
-    
+
     let paragraph = Paragraph::new(text)
         .block(Block::default().borders(Borders::ALL).title("Overview"))
         .wrap(Wrap { trim: true });
-    
+
     f.render_widget(paragraph, area);
 }
 
@@ -718,7 +761,8 @@ fn render_issues(f: &mut Frame, area: Rect, app: &mut App) {
             render_issue_detail(f, area, issue);
         }
     } else {
-        let items: Vec<ListItem> = app.filtered_issues
+        let items: Vec<ListItem> = app
+            .filtered_issues
             .iter()
             .map(|&idx| {
                 if let Some(issue) = app.all_issues.get(idx) {
@@ -729,12 +773,13 @@ fn render_issues(f: &mut Frame, area: Rect, app: &mut App) {
                         Severity::Low => "🟢",
                         Severity::Info => "🔵",
                     };
-                    let content = format!("{} [{:?}] {} {}", 
-                        severity_icon, 
-                        issue.category, 
+                    let content = format!(
+                        "{} [{:?}] {} {}",
+                        severity_icon,
+                        issue.category,
                         issue.file_path,
                         if let Some(line) = issue.line_number {
-                            format!(":{}", line)
+                            format!(":{line}")
                         } else {
                             String::new()
                         }
@@ -757,23 +802,34 @@ fn render_issues(f: &mut Frame, area: Rect, app: &mut App) {
 
 fn render_issue_detail(f: &mut Frame, area: Rect, issue: &CodeIssue) {
     let text = vec![
-        Line::from(vec![Span::styled("🔍 Issue Details", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled(
+            "🔍 Issue Details",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(""),
         Line::from(format!("📁 File: {}", issue.file_path)),
         Line::from(format!("📂 Category: {:?}", issue.category)),
         Line::from(format!("⚠️ Severity: {:?}", issue.severity)),
         Line::from(""),
-        Line::from(vec![Span::styled("📝 Description:", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled(
+            "📝 Description:",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
         Line::from(format!("   {}", issue.description)),
         Line::from(""),
-        Line::from(vec![Span::styled("💡 Suggestion:", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled(
+            "💡 Suggestion:",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
         Line::from(format!("   {}", issue.suggestion)),
     ];
-    
+
     let paragraph = Paragraph::new(text)
         .block(Block::default().borders(Borders::ALL).title("Issue Detail"))
         .wrap(Wrap { trim: true });
-    
+
     f.render_widget(paragraph, area);
 }
 
@@ -782,7 +838,11 @@ fn render_files(f: &mut Frame, area: Rect, app: &mut App) {
     let items: Vec<ListItem> = files
         .iter()
         .map(|file| {
-            let issue_count = app.all_issues.iter().filter(|i| i.file_path == *file).count();
+            let issue_count = app
+                .all_issues
+                .iter()
+                .filter(|i| i.file_path == *file)
+                .count();
             let icon = if issue_count > 0 {
                 match issue_count {
                     1..=2 => "🟡",
@@ -792,11 +852,11 @@ fn render_files(f: &mut Frame, area: Rect, app: &mut App) {
             } else {
                 "✅"
             };
-            
+
             let content = if issue_count > 0 {
-                format!("{} {} ({} issues)", icon, file, issue_count)
+                format!("{icon} {file} ({issue_count} issues)")
             } else {
-                format!("{} {}", icon, file)
+                format!("{icon} {file}")
             };
             ListItem::new(content)
         })
@@ -809,7 +869,11 @@ fn render_files(f: &mut Frame, area: Rect, app: &mut App) {
     }
 
     let files_list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Changed Files"))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Changed Files"),
+        )
         .highlight_style(Style::default().bg(Color::DarkGray))
         .highlight_symbol("► ");
 
@@ -818,35 +882,57 @@ fn render_files(f: &mut Frame, area: Rect, app: &mut App) {
 
 fn render_reports(f: &mut Frame, area: Rect, _app: &App) {
     let text = vec![
-        Line::from(vec![Span::styled("📄 Generate Report", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled(
+            "📄 Generate Report",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(""),
         Line::from("Choose a report format to generate:"),
         Line::from(""),
-        Line::from(vec![Span::styled("1️⃣  Full Markdown Report", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled(
+            "1️⃣  Full Markdown Report",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("     • Complete analysis with all issues"),
         Line::from("     • AI assessment and recommendations"),
         Line::from(""),
-        Line::from(vec![Span::styled("2️⃣  Executive Summary", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled(
+            "2️⃣  Executive Summary",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("     • High-level overview"),
         Line::from("     • Key metrics and priority issues"),
         Line::from(""),
-        Line::from(vec![Span::styled("3️⃣  Critical Issues Only", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled(
+            "3️⃣  Critical Issues Only",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("     • Focus on critical and high-severity issues"),
         Line::from("     • Immediate action items"),
     ];
-    
+
     let paragraph = Paragraph::new(text)
         .block(Block::default().borders(Borders::ALL).title("Reports"))
         .wrap(Wrap { trim: true });
-    
+
     f.render_widget(paragraph, area);
 }
 
 fn render_help(f: &mut Frame, area: Rect, _app: &App) {
     let text = vec![
-        Line::from(vec![Span::styled("🆘 Help - AI Code Review Tool", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled(
+            "🆘 Help - AI Code Review Tool",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(""),
-        Line::from(vec![Span::styled("📋 Navigation Commands:", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled(
+            "📋 Navigation Commands:",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("   Tab/Shift+Tab - Switch between tabs"),
         Line::from("   o - Show overview screen"),
         Line::from("   i - Show issues list"),
@@ -855,17 +941,20 @@ fn render_help(f: &mut Frame, area: Rect, _app: &App) {
         Line::from("   h - Show this help"),
         Line::from("   q - Exit the application"),
         Line::from(""),
-        Line::from(vec![Span::styled("🐛 Issues Commands:", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from(vec![Span::styled(
+            "🐛 Issues Commands:",
+            Style::default().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("   ↑/k - Navigate to previous issue"),
         Line::from("   ↓/j - Navigate to next issue"),
         Line::from("   Enter - View issue details"),
         Line::from("   c - Clear filters"),
     ];
-    
+
     let paragraph = Paragraph::new(text)
         .block(Block::default().borders(Borders::ALL).title("Help"))
         .wrap(Wrap { trim: true });
-    
+
     f.render_widget(paragraph, area);
 }
 
@@ -875,16 +964,18 @@ fn render_status_bar(f: &mut Frame, area: Rect, app: &App) {
     } else {
         match app.current_tab {
             AppTab::Overview => "[Tab] switch tabs | [q] quit".to_string(),
-            AppTab::Issues => "[↑↓/jk] navigate | [Enter] details | [c] clear filters | [q] quit".to_string(),
+            AppTab::Issues => {
+                "[↑↓/jk] navigate | [Enter] details | [c] clear filters | [q] quit".to_string()
+            }
             AppTab::Files => "[↑↓] navigate | [q] quit".to_string(),
             AppTab::Reports => "[1/2/3] generate report | [q] quit".to_string(),
             AppTab::Help => "[Tab] switch tabs | [q] quit".to_string(),
         }
     };
-    
-    let status = Paragraph::new(status_text)
-        .style(Style::default().fg(Color::White).bg(Color::DarkGray));
-    
+
+    let status =
+        Paragraph::new(status_text).style(Style::default().fg(Color::White).bg(Color::DarkGray));
+
     f.render_widget(status, area);
 }
 
@@ -921,12 +1012,14 @@ fn generate_summary_report(app: &App) -> String {
         app.review.metrics.lines_added,
         app.review.metrics.lines_removed,
         app.review.branch_comparison.commits_analyzed.len(),
-        if app.all_issues
+        if app
+            .all_issues
             .iter()
             .any(|i| matches!(i.severity, Severity::Critical))
         {
             "🚨 **DO NOT MERGE** - Critical issues require immediate attention."
-        } else if app.all_issues
+        } else if app
+            .all_issues
             .iter()
             .any(|i| matches!(i.severity, Severity::High))
         {
@@ -941,7 +1034,8 @@ fn generate_summary_report(app: &App) -> String {
 fn generate_critical_issues_report(app: &App) -> String {
     let mut report = String::from("# Critical Issues Report\n\n");
 
-    let critical_issues: Vec<_> = app.all_issues
+    let critical_issues: Vec<_> = app
+        .all_issues
         .iter()
         .filter(|i| matches!(i.severity, Severity::Critical | Severity::High))
         .collect();
@@ -1000,12 +1094,12 @@ fn generate_critical_issues_report(app: &App) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::review::{BranchComparison, CodeIssue, IssueCategory, Review, Severity, CommitInfo};
+    use crate::review::{BranchComparison, CodeIssue, CommitInfo, IssueCategory, Review, Severity};
 
     // Helper function to create a test review with files
     fn create_test_review_with_files() -> Review {
         let mut review = Review::default();
-        
+
         // Set up branch comparison with files
         review.branch_comparison = BranchComparison {
             source_branch: "main".to_string(),
@@ -1027,10 +1121,7 @@ mod tests {
                     message: "Fix bug".to_string(),
                     author: "test".to_string(),
                     timestamp: "2025-01-02T00:00:00Z".to_string(),
-                    files_changed: vec![
-                        "src/utils.rs".to_string(),
-                        "README.md".to_string(),
-                    ],
+                    files_changed: vec!["src/utils.rs".to_string(), "README.md".to_string()],
                 },
             ],
         };
@@ -1096,7 +1187,7 @@ mod tests {
         assert!(files.contains(&"tests/integration.rs".to_string()));
         assert!(files.contains(&"src/utils.rs".to_string()));
         assert!(files.contains(&"README.md".to_string()));
-        
+
         // Should be 5 unique files
         assert_eq!(files.len(), 5);
     }
@@ -1121,7 +1212,7 @@ mod tests {
         let mut app = App::new(review);
 
         app.ensure_file_list_initialized();
-        
+
         // Should remain uninitialized when no files
         assert_eq!(app.file_list_state.selected(), None);
         assert_eq!(app.selected_file_index, 0);
@@ -1178,7 +1269,7 @@ mod tests {
         // Test navigation at bottom boundary (should wrap to first item)
         app.selected_file_index = files.len() - 1;
         app.file_list_state.select(Some(app.selected_file_index));
-        
+
         app.next_file();
         assert_eq!(app.selected_file_index, 0); // Should wrap to first item
     }
@@ -1229,21 +1320,21 @@ mod tests {
 
         // Test next_tab
         assert_eq!(app.current_tab, AppTab::Overview);
-        
+
         app.next_tab();
         assert_eq!(app.current_tab, AppTab::Issues);
-        
+
         app.next_tab();
         assert_eq!(app.current_tab, AppTab::Files);
         // When switching to Files, it should initialize
         assert_eq!(app.file_list_state.selected(), Some(0));
-        
+
         app.next_tab();
         assert_eq!(app.current_tab, AppTab::Reports);
-        
+
         app.next_tab();
         assert_eq!(app.current_tab, AppTab::Help);
-        
+
         app.next_tab();
         assert_eq!(app.current_tab, AppTab::Overview);
     }
@@ -1255,13 +1346,13 @@ mod tests {
 
         // Test prev_tab
         assert_eq!(app.current_tab, AppTab::Overview);
-        
+
         app.prev_tab();
         assert_eq!(app.current_tab, AppTab::Help);
-        
+
         app.prev_tab();
         assert_eq!(app.current_tab, AppTab::Reports);
-        
+
         app.prev_tab();
         assert_eq!(app.current_tab, AppTab::Files);
         // When switching to Files, it should initialize
@@ -1273,18 +1364,18 @@ mod tests {
         let review = create_test_review_with_files();
         let mut app = App::new(review);
         app.current_tab = AppTab::Files;
-        
+
         let files = app.get_files();
-        
+
         // Set index beyond bounds
         app.selected_file_index = files.len() + 5;
-        
+
         // Simulate bounds checking that happens in render_files
         if !files.is_empty() && app.selected_file_index >= files.len() {
             app.selected_file_index = 0;
             app.file_list_state.select(Some(app.selected_file_index));
         }
-        
+
         // Should be reset to 0
         assert_eq!(app.selected_file_index, 0);
         assert_eq!(app.file_list_state.selected(), Some(0));
@@ -1301,7 +1392,7 @@ mod tests {
         for i in 0..3 {
             app.selected_file_index = i;
             app.file_list_state.select(Some(i));
-            
+
             assert_eq!(app.selected_file_index, i);
             assert_eq!(app.file_list_state.selected(), Some(i));
         }
@@ -1315,11 +1406,11 @@ mod tests {
         // Call ensure_file_list_initialized multiple times
         app.ensure_file_list_initialized();
         assert_eq!(app.file_list_state.selected(), Some(0));
-        
+
         // Move selection
         app.selected_file_index = 2;
         app.file_list_state.select(Some(2));
-        
+
         // Call again - should not reset if already initialized
         app.ensure_file_list_initialized();
         assert_eq!(app.file_list_state.selected(), Some(2));

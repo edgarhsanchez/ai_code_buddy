@@ -51,18 +51,18 @@ jobs:
 
   build:
     name: Build
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runs-on }}
     needs: test
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - os: windows-latest
+          - runs-on: windows-latest
             target: x86_64-pc-windows-msvc
-          - os: macos-latest
+          - runs-on: macos-latest
             target: x86_64-apple-darwin
-          - os: macos-latest
+          - runs-on: [self-hosted, macOS, ARM64]
             target: aarch64-apple-darwin
 
     steps:
@@ -93,4 +93,4 @@ jobs:
       with:
         name: ai_code_buddy-${{ matrix.target }}
         path: |
-          target/${{ matrix.target }}/release/ai_code_buddy${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          target/${{ matrix.target }}/release/ai_code_buddy${{ contains(matrix.runs-on, 'windows-latest') && '.exe' || '' }}

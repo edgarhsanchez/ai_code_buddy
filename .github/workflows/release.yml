@@ -41,20 +41,20 @@ jobs:
   build-and-upload:
     name: Build and Upload
     needs: create-release
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runs-on }}
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             asset_name: ai-code-buddy-linux-x86_64
-          - os: windows-latest
+          - runs-on: windows-latest
             target: x86_64-pc-windows-msvc
             asset_name: ai-code-buddy-windows-x86_64.exe
-          - os: macos-13
+          - runs-on: macos-13
             target: x86_64-apple-darwin
             asset_name: ai-code-buddy-macos-x86_64
-          - os: macos-13
+          - runs-on: [self-hosted, macOS, ARM64]
             target: aarch64-apple-darwin
             asset_name: ai-code-buddy-macos-aarch64
 
@@ -70,6 +70,13 @@ jobs:
     - name: Install dependencies (macOS)
       if: runner.os == 'macOS'
       run: |
+        # Check if Homebrew is available, install if needed
+        if ! command -v brew &> /dev/null; then
+          echo "Homebrew not found, installing..."
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        fi
+        
+        # Install OpenSSL
         brew install openssl@3
         echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
         echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV

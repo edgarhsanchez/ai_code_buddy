@@ -88,7 +88,11 @@ impl GitAnalyzer {
     }
 
     #[allow(dead_code)]
-    pub fn get_file_content_at_commit_id(&self, commit_id: &str, file_path: &str) -> Result<String> {
+    pub fn get_file_content_at_commit_id(
+        &self,
+        commit_id: &str,
+        file_path: &str,
+    ) -> Result<String> {
         let oid = Oid::from_str(commit_id)?;
         let commit = self.repo.find_commit(oid)?;
         let tree = commit.tree()?;

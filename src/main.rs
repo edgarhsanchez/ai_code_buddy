@@ -835,12 +835,13 @@ async fn main() -> anyhow::Result<()> {
         config.exclude_patterns.extend(cli.exclude_patterns);
     }
 
-    // Perform code analysis
-    let review = perform_code_analysis(
+    // Perform code analysis with branch validation
+    let review = perform_code_analysis_with_branch_selection(
         &cli.source_branch,
         &cli.target_branch,
         &cli.repo_path,
         &config,
+        cli.cli_mode,
     )
     .await?;
 
@@ -859,6 +860,58 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+async fn perform_code_analysis_with_branch_selection(
+    source_branch: &str,
+    target_branch: &str,
+    repo_path: &str,
+    config: &ReviewConfig,
+    cli_mode: bool,
+) -> anyhow::Result<Review> {
+    // First try with the provided branches
+    match perform_code_analysis(source_branch, target_branch, repo_path, config).await {
+        Ok(review) => Ok(review),
+        Err(e) => {
+            // Check if the error is related to branch not found
+            let error_msg = e.to_string();
+            if error_msg.contains("cannot locate") || error_msg.contains("branch") {
+                if cli_mode {
+                    // In CLI mode, just show available branches and exit with error
+                    eprintln!("❌ Error: {}", e);
+                    eprintln!("📋 Available branches in repository:");
+                    
+                    if let Ok(git_analyzer) = GitAnalyzer::new(repo_path) {
+                        if let Ok(branches) = git_analyzer.get_available_branches() {
+                            for branch in branches {
+                                eprintln!("  • {}", branch);
+                            }
+                        }
+                    }
+                    eprintln!("💡 Please specify valid source and target branches using --source and --target flags");
+                    return Err(e);
+                } else {
+                    // In TUI mode, show branch selector
+                    eprintln!("⚠️  Branch not found: {}", e);
+                    eprintln!("🌿 Opening branch selector...");
+                    
+                    match ui_simple::run_branch_selector(repo_path).await {
+                        Ok((selected_source, selected_target)) => {
+                            println!("✅ Selected branches: {} → {}", selected_source, selected_target);
+                            perform_code_analysis(&selected_source, &selected_target, repo_path, config).await
+                        }
+                        Err(selector_err) => {
+                            eprintln!("❌ Branch selection failed: {}", selector_err);
+                            Err(e)
+                        }
+                    }
+                }
+            } else {
+                // Non-branch related error, just return it
+                Err(e)
+            }
+        }
+    }
 }
 
 async fn perform_code_analysis(

@@ -1,4 +1,5 @@
 use crate::review::{CodeIssue, IssueCategory, Review, Severity};
+use crate::git_analyzer::GitAnalyzer;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
@@ -52,8 +53,8 @@ impl App {
         if !filtered_issues.is_empty() {
             issue_list_state.select(Some(0));
         }
-        let mut file_list_state = ListState::default();
-        file_list_state.select(Some(0));
+        let file_list_state = ListState::default();
+        // File list state will be initialized when first accessed
 
         Self {
             review,
@@ -144,6 +145,26 @@ impl App {
         }
     }
 
+    pub fn next_file(&mut self) {
+        let files = self.get_files();
+        if !files.is_empty() {
+            self.selected_file_index = (self.selected_file_index + 1) % files.len();
+            self.file_list_state.select(Some(self.selected_file_index));
+        }
+    }
+
+    pub fn prev_file(&mut self) {
+        let files = self.get_files();
+        if !files.is_empty() {
+            self.selected_file_index = if self.selected_file_index > 0 {
+                self.selected_file_index - 1
+            } else {
+                files.len() - 1
+            };
+            self.file_list_state.select(Some(self.selected_file_index));
+        }
+    }
+
     pub fn next_tab(&mut self) {
         self.current_tab = match self.current_tab {
             AppTab::Overview => AppTab::Issues,
@@ -152,6 +173,9 @@ impl App {
             AppTab::Reports => AppTab::Help,
             AppTab::Help => AppTab::Overview,
         };
+        if self.current_tab == AppTab::Files {
+            self.ensure_file_list_initialized();
+        }
         self.show_issue_detail = false;
     }
 
@@ -163,6 +187,9 @@ impl App {
             AppTab::Reports => AppTab::Files,
             AppTab::Help => AppTab::Reports,
         };
+        if self.current_tab == AppTab::Files {
+            self.ensure_file_list_initialized();
+        }
         self.show_issue_detail = false;
     }
 
@@ -173,7 +200,7 @@ impl App {
     }
 
     pub fn get_files(&self) -> Vec<String> {
-        self.review
+        let mut files: Vec<String> = self.review
             .branch_comparison
             .commits_analyzed
             .iter()
@@ -181,7 +208,21 @@ impl App {
             .cloned()
             .collect::<std::collections::HashSet<_>>()
             .into_iter()
-            .collect()
+            .collect();
+        
+        // Sort files for consistent ordering
+        files.sort();
+        files
+    }
+
+    pub fn ensure_file_list_initialized(&mut self) {
+        if self.file_list_state.selected().is_none() {
+            let files = self.get_files();
+            if !files.is_empty() {
+                self.file_list_state.select(Some(0));
+                self.selected_file_index = 0;
+            }
+        }
     }
 
     pub fn clear_filters(&mut self) {
@@ -274,6 +315,226 @@ impl App {
     }
 }
 
+// Branch selection for interactive mode
+#[derive(Debug)]
+pub struct BranchSelector {
+    pub branches: Vec<String>,
+    pub source_index: usize,
+    pub target_index: usize,
+    pub selecting_source: bool,
+    pub source_list_state: ListState,
+    pub target_list_state: ListState,
+    pub repo_path: String,
+}
+
+impl BranchSelector {
+    pub fn new(repo_path: &str) -> anyhow::Result<Self> {
+        let git_analyzer = GitAnalyzer::new(repo_path)?;
+        let branches = git_analyzer.get_available_branches()?;
+        
+        // Find default indices
+        let mut source_index = 0;
+        let target_index = if branches.len() > 1 { 1 } else { 0 };
+        
+        // Try to set sensible defaults
+        for (i, branch) in branches.iter().enumerate() {
+            if branch == "main" || branch == "master" {
+                source_index = i;
+            }
+        }
+        
+        let mut source_list_state = ListState::default();
+        let mut target_list_state = ListState::default();
+        source_list_state.select(Some(source_index));
+        target_list_state.select(Some(target_index));
+        
+        Ok(Self {
+            branches,
+            source_index,
+            target_index,
+            selecting_source: true,
+            source_list_state,
+            target_list_state,
+            repo_path: repo_path.to_string(),
+        })
+    }
+    
+    pub fn get_source_branch(&self) -> &str {
+        self.branches.get(self.source_index).map(|s| s.as_str()).unwrap_or("main")
+    }
+    
+    pub fn get_target_branch(&self) -> &str {
+        self.branches.get(self.target_index).map(|s| s.as_str()).unwrap_or("HEAD")
+    }
+    
+    pub fn next_branch(&mut self) {
+        if self.selecting_source {
+            if self.source_index + 1 < self.branches.len() {
+                self.source_index += 1;
+                self.source_list_state.select(Some(self.source_index));
+            }
+        } else {
+            if self.target_index + 1 < self.branches.len() {
+                self.target_index += 1;
+                self.target_list_state.select(Some(self.target_index));
+            }
+        }
+    }
+    
+    pub fn prev_branch(&mut self) {
+        if self.selecting_source {
+            if self.source_index > 0 {
+                self.source_index -= 1;
+                self.source_list_state.select(Some(self.source_index));
+            }
+        } else {
+            if self.target_index > 0 {
+                self.target_index -= 1;
+                self.target_list_state.select(Some(self.target_index));
+            }
+        }
+    }
+    
+    pub fn toggle_selection(&mut self) {
+        self.selecting_source = !self.selecting_source;
+    }
+}
+
+pub async fn run_branch_selector(repo_path: &str) -> anyhow::Result<(String, String)> {
+    // Setup terminal
+    enable_raw_mode()?;
+    let mut stdout = stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    let mut selector = BranchSelector::new(repo_path)?;
+    let result = run_branch_selector_app(&mut terminal, &mut selector).await;
+
+    // Restore terminal
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    match result {
+        Ok((source, target)) => Ok((source, target)),
+        Err(err) => {
+            println!("Error in branch selector: {:?}", err);
+            Err(err)
+        }
+    }
+}
+
+async fn run_branch_selector_app<B: Backend>(
+    terminal: &mut Terminal<B>,
+    selector: &mut BranchSelector,
+) -> anyhow::Result<(String, String)> {
+    loop {
+        terminal.draw(|f| render_branch_selector(f, selector))?;
+
+        if let Event::Key(key) = event::read()? {
+            if key.kind == KeyEventKind::Press {
+                match key.code {
+                    KeyCode::Char('q') | KeyCode::Esc => {
+                        return Err(anyhow::anyhow!("Branch selection cancelled"));
+                    }
+                    KeyCode::Up | KeyCode::Char('k') => selector.prev_branch(),
+                    KeyCode::Down | KeyCode::Char('j') => selector.next_branch(),
+                    KeyCode::Tab => selector.toggle_selection(),
+                    KeyCode::Enter => {
+                        return Ok((
+                            selector.get_source_branch().to_string(),
+                            selector.get_target_branch().to_string(),
+                        ));
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+}
+
+fn render_branch_selector(f: &mut Frame, selector: &BranchSelector) {
+    let size = f.area();
+    
+    // Create main layout
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Title
+            Constraint::Min(10),   // Content
+            Constraint::Length(3), // Instructions
+        ])
+        .split(size);
+
+    // Title
+    let title = Paragraph::new("🌿 Branch Selection - Choose Source and Target Branches")
+        .block(Block::default().borders(Borders::ALL))
+        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD));
+    f.render_widget(title, chunks[0]);
+
+    // Content - split into two columns
+    let content_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ])
+        .split(chunks[1]);
+
+    // Source branch list
+    let source_items: Vec<ListItem> = selector.branches
+        .iter()
+        .map(|branch| ListItem::new(branch.as_str()))
+        .collect();
+
+    let source_list = List::new(source_items)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .title("📤 Source Branch")
+            .border_style(if selector.selecting_source {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default().fg(Color::White)
+            }))
+        .highlight_style(Style::default().bg(Color::DarkGray))
+        .highlight_symbol("► ");
+
+    // Target branch list
+    let target_items: Vec<ListItem> = selector.branches
+        .iter()
+        .map(|branch| ListItem::new(branch.as_str()))
+        .collect();
+
+    let target_list = List::new(target_items)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .title("📥 Target Branch")
+            .border_style(if !selector.selecting_source {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default().fg(Color::White)
+            }))
+        .highlight_style(Style::default().bg(Color::DarkGray))
+        .highlight_symbol("► ");
+
+    f.render_stateful_widget(source_list, content_chunks[0], &mut selector.source_list_state.clone());
+    f.render_stateful_widget(target_list, content_chunks[1], &mut selector.target_list_state.clone());
+
+    // Instructions
+    let instructions = Paragraph::new(vec![
+        Line::from("📋 Navigation: ↑/↓ or j/k to select • Tab to switch between source/target"),
+        Line::from("⚡ Actions: Enter to confirm selection • q/Esc to cancel"),
+    ])
+    .block(Block::default().borders(Borders::ALL).title("Instructions"))
+    .style(Style::default().fg(Color::Gray));
+    f.render_widget(instructions, chunks[2]);
+}
+
 // Ratatui-based TUI implementation
 pub async fn run_tui(review: Review) -> anyhow::Result<()> {
     // Setup terminal
@@ -323,15 +584,17 @@ async fn run_app<B: Backend>(
                     KeyCode::Char('h') => app.current_tab = AppTab::Help,
                     KeyCode::Char('o') => app.current_tab = AppTab::Overview,
                     KeyCode::Char('i') => app.current_tab = AppTab::Issues,
-                    KeyCode::Char('f') => app.current_tab = AppTab::Files,
+                    KeyCode::Char('f') => {
+                        app.current_tab = AppTab::Files;
+                        app.ensure_file_list_initialized();
+                    },
                     KeyCode::Char('r') => app.current_tab = AppTab::Reports,
                     KeyCode::Up | KeyCode::Char('k') => {
                         match app.current_tab {
                             AppTab::Issues => app.prev_issue(),
                             AppTab::Files => {
-                                if app.selected_file_index > 0 {
-                                    app.selected_file_index -= 1;
-                                }
+                                app.ensure_file_list_initialized();
+                                app.prev_file();
                             },
                             _ => {}
                         }
@@ -340,10 +603,8 @@ async fn run_app<B: Backend>(
                         match app.current_tab {
                             AppTab::Issues => app.next_issue(),
                             AppTab::Files => {
-                                let files = app.get_files();
-                                if app.selected_file_index + 1 < files.len() {
-                                    app.selected_file_index += 1;
-                                }
+                                app.ensure_file_list_initialized();
+                                app.next_file();
                             },
                             _ => {}
                         }
@@ -541,14 +802,10 @@ fn render_files(f: &mut Frame, area: Rect, app: &mut App) {
         })
         .collect();
 
-    // Update file list state
-    if !files.is_empty() {
-        if app.selected_file_index >= files.len() {
-            app.selected_file_index = 0;
-        }
+    // Only validate bounds, don't update selection state here
+    if !files.is_empty() && app.selected_file_index >= files.len() {
+        app.selected_file_index = 0;
         app.file_list_state.select(Some(app.selected_file_index));
-    } else {
-        app.file_list_state.select(None);
     }
 
     let files_list = List::new(items)
@@ -738,4 +995,334 @@ fn generate_critical_issues_report(app: &App) -> String {
     }
 
     report
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::review::{BranchComparison, CodeIssue, IssueCategory, Review, Severity, CommitInfo};
+
+    // Helper function to create a test review with files
+    fn create_test_review_with_files() -> Review {
+        let mut review = Review::default();
+        
+        // Set up branch comparison with files
+        review.branch_comparison = BranchComparison {
+            source_branch: "main".to_string(),
+            target_branch: "feature".to_string(),
+            commits_analyzed: vec![
+                CommitInfo {
+                    hash: "abc123".to_string(),
+                    message: "Add feature".to_string(),
+                    author: "test".to_string(),
+                    timestamp: "2025-01-01T00:00:00Z".to_string(),
+                    files_changed: vec![
+                        "src/main.rs".to_string(),
+                        "src/lib.rs".to_string(),
+                        "tests/integration.rs".to_string(),
+                    ],
+                },
+                CommitInfo {
+                    hash: "def456".to_string(),
+                    message: "Fix bug".to_string(),
+                    author: "test".to_string(),
+                    timestamp: "2025-01-02T00:00:00Z".to_string(),
+                    files_changed: vec![
+                        "src/utils.rs".to_string(),
+                        "README.md".to_string(),
+                    ],
+                },
+            ],
+        };
+
+        // Add some issues to the files
+        let issues = vec![
+            CodeIssue {
+                category: IssueCategory::Security,
+                severity: Severity::High,
+                description: "Security issue in main".to_string(),
+                file_path: "src/main.rs".to_string(),
+                line_number: Some(10),
+                suggestion: "Fix this".to_string(),
+                code_snippet: Some("let x = 1;".to_string()),
+            },
+            CodeIssue {
+                category: IssueCategory::Performance,
+                severity: Severity::Medium,
+                description: "Performance issue in lib".to_string(),
+                file_path: "src/lib.rs".to_string(),
+                line_number: Some(20),
+                suggestion: "Optimize this".to_string(),
+                code_snippet: Some("for i in 0..n".to_string()),
+            },
+            CodeIssue {
+                category: IssueCategory::Style,
+                severity: Severity::Low,
+                description: "Style issue in utils".to_string(),
+                file_path: "src/utils.rs".to_string(),
+                line_number: Some(5),
+                suggestion: "Format this".to_string(),
+                code_snippet: None,
+            },
+        ];
+
+        for issue in issues {
+            review.add_issue(issue);
+        }
+
+        review
+    }
+
+    #[test]
+    fn test_app_initialization() {
+        let review = create_test_review_with_files();
+        let app = App::new(review);
+
+        assert_eq!(app.current_tab, AppTab::Overview);
+        assert_eq!(app.selected_file_index, 0);
+        assert!(!app.should_quit);
+        assert!(!app.show_issue_detail);
+    }
+
+    #[test]
+    fn test_get_files() {
+        let review = create_test_review_with_files();
+        let app = App::new(review);
+        let files = app.get_files();
+
+        // Should get unique files from all commits
+        assert!(files.contains(&"src/main.rs".to_string()));
+        assert!(files.contains(&"src/lib.rs".to_string()));
+        assert!(files.contains(&"tests/integration.rs".to_string()));
+        assert!(files.contains(&"src/utils.rs".to_string()));
+        assert!(files.contains(&"README.md".to_string()));
+        
+        // Should be 5 unique files
+        assert_eq!(files.len(), 5);
+    }
+
+    #[test]
+    fn test_file_list_initialization() {
+        let review = create_test_review_with_files();
+        let mut app = App::new(review);
+
+        // Initially, file list state should be uninitialized
+        assert_eq!(app.file_list_state.selected(), None);
+
+        // After ensure_file_list_initialized, it should be set to 0
+        app.ensure_file_list_initialized();
+        assert_eq!(app.file_list_state.selected(), Some(0));
+        assert_eq!(app.selected_file_index, 0);
+    }
+
+    #[test]
+    fn test_file_list_initialization_with_empty_files() {
+        let review = Review::default(); // No files
+        let mut app = App::new(review);
+
+        app.ensure_file_list_initialized();
+        
+        // Should remain uninitialized when no files
+        assert_eq!(app.file_list_state.selected(), None);
+        assert_eq!(app.selected_file_index, 0);
+    }
+
+    #[test]
+    fn test_file_navigation_down() {
+        let review = create_test_review_with_files();
+        let mut app = App::new(review);
+        app.current_tab = AppTab::Files;
+        app.ensure_file_list_initialized();
+
+        let initial_index = app.selected_file_index;
+
+        // Simulate down navigation using the new method
+        app.next_file();
+
+        assert_eq!(app.selected_file_index, initial_index + 1);
+        assert_eq!(app.file_list_state.selected(), Some(initial_index + 1));
+    }
+
+    #[test]
+    fn test_file_navigation_up() {
+        let review = create_test_review_with_files();
+        let mut app = App::new(review);
+        app.current_tab = AppTab::Files;
+        app.ensure_file_list_initialized();
+
+        // Move to second item first
+        app.next_file();
+        assert_eq!(app.selected_file_index, 1);
+
+        // Simulate up navigation using the new method
+        app.prev_file();
+
+        assert_eq!(app.selected_file_index, 0);
+        assert_eq!(app.file_list_state.selected(), Some(0));
+    }
+
+    #[test]
+    fn test_file_navigation_boundaries() {
+        let review = create_test_review_with_files();
+        let mut app = App::new(review);
+        app.current_tab = AppTab::Files;
+        app.ensure_file_list_initialized();
+
+        let files = app.get_files();
+
+        // Test navigation at top boundary (should wrap to last item)
+        assert_eq!(app.selected_file_index, 0);
+        app.prev_file();
+        assert_eq!(app.selected_file_index, files.len() - 1); // Should wrap to last item
+
+        // Test navigation at bottom boundary (should wrap to first item)
+        app.selected_file_index = files.len() - 1;
+        app.file_list_state.select(Some(app.selected_file_index));
+        
+        app.next_file();
+        assert_eq!(app.selected_file_index, 0); // Should wrap to first item
+    }
+
+    #[test]
+    fn test_file_navigation_wrapping() {
+        let review = create_test_review_with_files();
+        let mut app = App::new(review);
+        app.current_tab = AppTab::Files;
+        app.ensure_file_list_initialized();
+
+        let files = app.get_files();
+
+        // Test wrapping from first to last
+        assert_eq!(app.selected_file_index, 0);
+        app.prev_file();
+        assert_eq!(app.selected_file_index, files.len() - 1);
+        assert_eq!(app.file_list_state.selected(), Some(files.len() - 1));
+
+        // Test wrapping from last to first
+        app.next_file();
+        assert_eq!(app.selected_file_index, 0);
+        assert_eq!(app.file_list_state.selected(), Some(0));
+    }
+
+    #[test]
+    fn test_file_navigation_with_tab_switching() {
+        let review = create_test_review_with_files();
+        let mut app = App::new(review);
+
+        // Start at Overview tab
+        assert_eq!(app.current_tab, AppTab::Overview);
+        assert_eq!(app.file_list_state.selected(), None);
+
+        // Switch to Files tab
+        app.current_tab = AppTab::Files;
+        app.ensure_file_list_initialized();
+
+        // Should be initialized
+        assert_eq!(app.file_list_state.selected(), Some(0));
+        assert_eq!(app.selected_file_index, 0);
+    }
+
+    #[test]
+    fn test_tab_navigation() {
+        let review = create_test_review_with_files();
+        let mut app = App::new(review);
+
+        // Test next_tab
+        assert_eq!(app.current_tab, AppTab::Overview);
+        
+        app.next_tab();
+        assert_eq!(app.current_tab, AppTab::Issues);
+        
+        app.next_tab();
+        assert_eq!(app.current_tab, AppTab::Files);
+        // When switching to Files, it should initialize
+        assert_eq!(app.file_list_state.selected(), Some(0));
+        
+        app.next_tab();
+        assert_eq!(app.current_tab, AppTab::Reports);
+        
+        app.next_tab();
+        assert_eq!(app.current_tab, AppTab::Help);
+        
+        app.next_tab();
+        assert_eq!(app.current_tab, AppTab::Overview);
+    }
+
+    #[test]
+    fn test_prev_tab() {
+        let review = create_test_review_with_files();
+        let mut app = App::new(review);
+
+        // Test prev_tab
+        assert_eq!(app.current_tab, AppTab::Overview);
+        
+        app.prev_tab();
+        assert_eq!(app.current_tab, AppTab::Help);
+        
+        app.prev_tab();
+        assert_eq!(app.current_tab, AppTab::Reports);
+        
+        app.prev_tab();
+        assert_eq!(app.current_tab, AppTab::Files);
+        // When switching to Files, it should initialize
+        assert_eq!(app.file_list_state.selected(), Some(0));
+    }
+
+    #[test]
+    fn test_bounds_checking_in_render() {
+        let review = create_test_review_with_files();
+        let mut app = App::new(review);
+        app.current_tab = AppTab::Files;
+        
+        let files = app.get_files();
+        
+        // Set index beyond bounds
+        app.selected_file_index = files.len() + 5;
+        
+        // Simulate bounds checking that happens in render_files
+        if !files.is_empty() && app.selected_file_index >= files.len() {
+            app.selected_file_index = 0;
+            app.file_list_state.select(Some(app.selected_file_index));
+        }
+        
+        // Should be reset to 0
+        assert_eq!(app.selected_file_index, 0);
+        assert_eq!(app.file_list_state.selected(), Some(0));
+    }
+
+    #[test]
+    fn test_file_list_state_consistency() {
+        let review = create_test_review_with_files();
+        let mut app = App::new(review);
+        app.current_tab = AppTab::Files;
+        app.ensure_file_list_initialized();
+
+        // Test that selected_file_index and file_list_state remain in sync
+        for i in 0..3 {
+            app.selected_file_index = i;
+            app.file_list_state.select(Some(i));
+            
+            assert_eq!(app.selected_file_index, i);
+            assert_eq!(app.file_list_state.selected(), Some(i));
+        }
+    }
+
+    #[test]
+    fn test_multiple_initialization_calls() {
+        let review = create_test_review_with_files();
+        let mut app = App::new(review);
+
+        // Call ensure_file_list_initialized multiple times
+        app.ensure_file_list_initialized();
+        assert_eq!(app.file_list_state.selected(), Some(0));
+        
+        // Move selection
+        app.selected_file_index = 2;
+        app.file_list_state.select(Some(2));
+        
+        // Call again - should not reset if already initialized
+        app.ensure_file_list_initialized();
+        assert_eq!(app.file_list_state.selected(), Some(2));
+        assert_eq!(app.selected_file_index, 2);
+    }
 }

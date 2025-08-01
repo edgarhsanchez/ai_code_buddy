@@ -102,6 +102,49 @@ impl GitAnalyzer {
         Ok(String::from_utf8_lossy(blob.content()).to_string())
     }
 
+    pub fn get_available_branches(&self) -> Result<Vec<String>> {
+        let mut branches = Vec::new();
+        
+        // Get local branches
+        let local_branches = self.repo.branches(Some(git2::BranchType::Local))?;
+        for branch in local_branches {
+            let (branch, _) = branch?;
+            if let Some(name) = branch.name()? {
+                branches.push(name.to_string());
+            }
+        }
+
+        // Get remote branches
+        let remote_branches = self.repo.branches(Some(git2::BranchType::Remote))?;
+        for branch in remote_branches {
+            let (branch, _) = branch?;
+            if let Some(name) = branch.name()? {
+                // Remove the remote prefix (e.g., "origin/main" -> "main")
+                if let Some(short_name) = name.split('/').last() {
+                    if !branches.contains(&short_name.to_string()) {
+                        branches.push(short_name.to_string());
+                    }
+                }
+            }
+        }
+
+        // Sort branches, putting common ones first
+        branches.sort_by(|a, b| {
+            let common_branches = ["main", "master", "develop", "dev"];
+            let a_priority = common_branches.iter().position(|&x| x == a).unwrap_or(usize::MAX);
+            let b_priority = common_branches.iter().position(|&x| x == b).unwrap_or(usize::MAX);
+            
+            match (a_priority, b_priority) {
+                (usize::MAX, usize::MAX) => a.cmp(b), // Both not in common list, sort alphabetically
+                (usize::MAX, _) => std::cmp::Ordering::Greater, // a not common, b is common
+                (_, usize::MAX) => std::cmp::Ordering::Less, // a is common, b not common
+                _ => a_priority.cmp(&b_priority), // Both common, sort by priority
+            }
+        });
+
+        Ok(branches)
+    }
+
     fn get_branch_commit(&self, branch_name: &str) -> Result<Commit<'_>> {
         let branch = self
             .repo

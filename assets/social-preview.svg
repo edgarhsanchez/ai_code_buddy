@@ -1,0 +1,212 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" xmlns="http://www.w3.org/2000/svg">
+  <!-- Desert sunset background -->
+  <defs>
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff7043;stop-opacity:1" />
+      <stop offset="30%" style="stop-color:#ff8a65;stop-opacity:1" />
+      <stop offset="60%" style="stop-color:#ffab40;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffc107;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="groundGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8d6e63;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5d4037;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="rustGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ff5722;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#ff7043;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff5722;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="hatGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8d6e63;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5d4037;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Sky background -->
+  <rect width="1280" height="400" fill="url(#skyGradient)"/>
+  
+  <!-- Ground -->
+  <rect x="0" y="400" width="1280" height="240" fill="url(#groundGradient)"/>
+  
+  <!-- Sun -->
+  <circle cx="1100" cy="120" r="60" fill="#ffeb3b" opacity="0.9"/>
+  <circle cx="1100" cy="120" r="45" fill="#fff59d"/>
+  
+  <!-- Distant mountains -->
+  <polygon points="0,350 200,200 400,280 600,180 800,250 1000,160 1280,220 1280,400 0,400" 
+           fill="#6d4c41" opacity="0.6"/>
+  
+  <!-- Cacti in background -->
+  <g transform="translate(100, 300)">
+    <rect x="0" y="0" width="8" height="80" fill="#388e3c"/>
+    <rect x="-15" y="20" width="6" height="40" fill="#388e3c"/>
+    <rect x="12" y="30" width="6" height="35" fill="#388e3c"/>
+  </g>
+  
+  <g transform="translate(1050, 280)">
+    <rect x="0" y="0" width="10" height="100" fill="#388e3c"/>
+    <rect x="-20" y="15" width="8" height="50" fill="#388e3c"/>
+    <rect x="15" y="25" width="8" height="45" fill="#388e3c"/>
+  </g>
+  
+  <!-- Wild Rust code as a bucking bronco -->
+  <g transform="translate(400, 320)">
+    <!-- Code body (horse-like shape) -->
+    <ellipse cx="80" cy="40" rx="100" ry="30" fill="url(#rustGradient)" stroke="#d84315" stroke-width="3"/>
+    
+    <!-- Code legs (syntax elements) -->
+    <rect x="20" y="60" width="8" height="40" fill="#d84315" transform="rotate(-15 24 60)"/>
+    <rect x="40" y="65" width="8" height="35" fill="#d84315" transform="rotate(20 44 65)"/>
+    <rect x="120" y="60" width="8" height="40" fill="#d84315" transform="rotate(15 124 60)"/>
+    <rect x="140" y="65" width="8" height="35" fill="#d84315" transform="rotate(-20 144 65)"/>
+    
+    <!-- Rust code snippets flying around -->
+    <text x="0" y="0" fill="#fff" font-family="Monaco, monospace" font-size="14" transform="rotate(-20)">fn main()</text>
+    <text x="120" y="-10" fill="#fff" font-family="Monaco, monospace" font-size="12" transform="rotate(15)">match</text>
+    <text x="180" y="20" fill="#fff" font-family="Monaco, monospace" font-size="10" transform="rotate(-30)">unsafe</text>
+    <text x="-20" y="30" fill="#fff" font-family="Monaco, monospace" font-size="11" transform="rotate(25)">Result</text>
+    <text x="200" y="45" fill="#fff" font-family="Monaco, monospace" font-size="13" transform="rotate(10)">Option</text>
+    
+    <!-- Rust logo on the side -->
+    <circle cx="80" cy="25" r="15" fill="#000"/>
+    <text x="80" y="30" text-anchor="middle" fill="#ff5722" font-family="Arial" font-size="18" font-weight="bold">⚙️</text>
+    
+    <!-- Code mane -->
+    <path d="M20 25 Q10 15 5 25 Q15 20 20 25" fill="#d84315"/>
+    <path d="M25 20 Q15 10 10 20 Q20 15 25 20" fill="#ff5722"/>
+    <path d="M30 18 Q20 8 15 18 Q25 13 30 18" fill="#d84315"/>
+    
+    <!-- Tail -->
+    <path d="M180 35 Q200 25 220 40 Q210 50 190 45 Q185 40 180 35" fill="#d84315"/>
+    <text x="195" y="40" fill="#fff" font-family="Monaco, monospace" font-size="8">;</text>
+    <text x="205" y="45" fill="#fff" font-family="Monaco, monospace" font-size="8">{}</text>
+  </g>
+  
+  <!-- Cowboy riding the code -->
+  <g transform="translate(460, 250)">
+    <!-- Cowboy body -->
+    <ellipse cx="20" cy="50" rx="15" ry="25" fill="#8d6e63"/>
+    
+    <!-- Cowboy head -->
+    <circle cx="20" cy="20" r="12" fill="#ffdbcb"/>
+    
+    <!-- Sombrero (waving in the air) -->
+    <g transform="translate(-10, -20) rotate(-25)">
+      <ellipse cx="30" cy="25" rx="35" ry="8" fill="url(#hatGradient)"/>
+      <ellipse cx="30" cy="20" rx="20" ry="15" fill="#8d6e63"/>
+      <rect x="25" y="8" width="10" height="20" fill="#6d4c41"/>
+      <!-- Hat decoration -->
+      <rect x="15" y="18" width="30" height="3" fill="#ff5722"/>
+      <circle cx="45" cy="19" r="2" fill="#ffeb3b"/>
+    </g>
+    
+    <!-- Waving arm -->
+    <rect x="35" y="35" width="6" height="20" fill="#ffdbcb" transform="rotate(-45 38 35)"/>
+    <rect x="42" y="25" width="6" height="15" fill="#ffdbcb" transform="rotate(-30 45 25)"/>
+    
+    <!-- Other arm holding reins -->
+    <rect x="5" y="40" width="6" height="18" fill="#ffdbcb" transform="rotate(30 8 40)"/>
+    
+    <!-- Cowboy legs -->
+    <rect x="10" y="70" width="6" height="20" fill="#1976d2" transform="rotate(-10 13 70)"/>
+    <rect x="24" y="70" width="6" height="20" fill="#1976d2" transform="rotate(15 27 70)"/>
+    
+    <!-- Cowboy boots -->
+    <ellipse cx="13" cy="95" rx="4" ry="6" fill="#3e2723"/>
+    <ellipse cx="27" cy="95" rx="4" ry="6" fill="#3e2723"/>
+    
+    <!-- Bandana -->
+    <polygon points="14,25 26,25 22,30 18,30" fill="#f44336"/>
+    
+    <!-- Cowboy vest -->
+    <rect x="12" y="30" width="16" height="20" fill="#6d4c41"/>
+    <rect x="14" y="32" width="3" height="16" fill="#8d6e63"/>
+    <rect x="23" y="32" width="3" height="16" fill="#8d6e63"/>
+  </g>
+  
+  <!-- Lasso/rope connecting cowboy to code -->
+  <path d="M485 290 Q520 270 550 280 Q580 290 520 340" 
+        stroke="#8d6e63" stroke-width="3" fill="none" stroke-dasharray="5,5"/>
+  
+  <!-- Dust clouds -->
+  <g opacity="0.6">
+    <ellipse cx="350" cy="420" rx="40" ry="15" fill="#8d6e63"/>
+    <ellipse cx="650" cy="430" rx="35" ry="12" fill="#8d6e63"/>
+    <ellipse cx="580" cy="425" rx="25" ry="10" fill="#8d6e63"/>
+  </g>
+  
+  <!-- Title and text -->
+  <g transform="translate(50, 50)">
+    <text x="0" y="0" fill="#fff" font-family="Impact, Arial Black, sans-serif" 
+          font-size="48" font-weight="900" stroke="#000" stroke-width="2">AI CODE BUDDY</text>
+    <text x="0" y="40" fill="#ffeb3b" font-family="Arial, sans-serif" 
+          font-size="20" font-weight="bold">🤠 Wrangling Wild Code Since 2025</text>
+  </g>
+  
+  <!-- Features as wanted poster style -->
+  <g transform="translate(50, 450)">
+    <rect x="0" y="0" width="300" height="150" fill="#f5f5dc" stroke="#8d6e63" stroke-width="3"/>
+    <text x="150" y="20" text-anchor="middle" fill="#000" font-family="serif" 
+          font-size="16" font-weight="bold">WANTED</text>
+    <text x="150" y="35" text-anchor="middle" fill="#000" font-family="serif" 
+          font-size="12">Security Vulnerabilities</text>
+    
+    <text x="10" y="55" fill="#000" font-family="serif" font-size="11">🔫 OWASP Top 10 Hunter</text>
+    <text x="10" y="70" fill="#000" font-family="serif" font-size="11">🏇 Rust &amp; JavaScript Wrangler</text>
+    <text x="10" y="85" fill="#000" font-family="serif" font-size="11">⚡ Real-time Code Analysis</text>
+    <text x="10" y="100" fill="#000" font-family="serif" font-size="11">🎯 Line-by-Line Precision</text>
+    
+    <text x="150" y="125" text-anchor="middle" fill="#d84315" font-family="serif" 
+          font-size="14" font-weight="bold">REWARD: Clean Code</text>
+  </g>
+  
+  <!-- Install command as sheriff badge -->
+  <g transform="translate(900, 450)">
+    <polygon points="40,10 50,30 70,30 55,45 60,65 40,55 20,65 25,45 10,30 30,30" 
+             fill="#ffeb3b" stroke="#f57f17" stroke-width="2"/>
+    <text x="40" y="35" text-anchor="middle" fill="#000" font-family="serif" 
+          font-size="8" font-weight="bold">SHERIFF</text>
+    <text x="40" y="45" text-anchor="middle" fill="#000" font-family="serif" 
+          font-size="6">CODE BUDDY</text>
+    
+    <rect x="0" y="80" width="350" height="35" rx="5" fill="#000" stroke="#ffeb3b" stroke-width="2"/>
+    <text x="10" y="100" fill="#ffeb3b" font-family="Monaco, monospace" 
+          font-size="14">$ cargo install ai-code-buddy</text>
+  </g>
+  
+  <!-- Speech bubble from cowboy -->
+  <g transform="translate(400, 200)">
+    <ellipse cx="0" cy="0" rx="80" ry="25" fill="#fff" stroke="#000" stroke-width="2"/>
+    <polygon points="-20,20 -10,35 0,20" fill="#fff" stroke="#000" stroke-width="2"/>
+    <text x="0" y="-5" text-anchor="middle" fill="#000" font-family="Arial, sans-serif" 
+          font-size="12" font-weight="bold">Yee-haw! Got them</text>
+    <text x="0" y="8" text-anchor="middle" fill="#000" font-family="Arial, sans-serif" 
+          font-size="12" font-weight="bold">vulnerabilities!</text>
+  </g>
+  
+  <!-- GitHub info as ranch sign -->
+  <g transform="translate(850, 520)">
+    <rect x="0" y="0" width="250" height="60" fill="#8d6e63" stroke="#5d4037" stroke-width="3"/>
+    <rect x="5" y="5" width="240" height="50" fill="#6d4c41"/>
+    <text x="125" y="25" text-anchor="middle" fill="#fff" font-family="serif" 
+          font-size="12" font-weight="bold">The Code Buddy Ranch</text>
+    <text x="125" y="40" text-anchor="middle" fill="#ffeb3b" font-family="serif" 
+          font-size="10">github.com/edgarhsanchez/ai_code_buddy</text>
+  </g>
+  
+  <!-- Wild code snippets flying around -->
+  <g opacity="0.7">
+    <text x="200" y="150" fill="#fff" font-family="Monaco, monospace" 
+          font-size="12" transform="rotate(15)">if let Some(bug) = code.find_bug() {</text>
+    <text x="800" y="100" fill="#fff" font-family="Monaco, monospace" 
+          font-size="10" transform="rotate(-20)">panic!("Security hole!")</text>
+    <text x="100" y="300" fill="#fff" font-family="Monaco, monospace" 
+          font-size="11" transform="rotate(30)">match vulnerability {</text>
+    <text x="1000" y="250" fill="#fff" font-family="Monaco, monospace" 
+          font-size="9" transform="rotate(-10)">Ok(safe_code) => cowboy.smile(),</text>
+  </g>
+  
+</svg>

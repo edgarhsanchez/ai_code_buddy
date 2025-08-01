@@ -1,52 +1,85 @@
 use crate::review::{CodeIssue, IssueCategory, Review, Severity};
-use std::io::{self, Write};
+use crossterm::{
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{
+        Block, Borders, List, ListItem, ListState, Paragraph, Tabs, Wrap,
+    },
+    Frame, Terminal,
+};
+use std::io::{stdout};
 
-#[derive(Debug, Clone)]
-pub enum ViewMode {
+#[derive(Debug, Clone, PartialEq)]
+pub enum AppTab {
     Overview,
-    IssuesList,
-    IssueDetail(usize),
-    ReportGeneration,
+    Issues,
     Files,
+    Reports,
+    Help,
 }
 
-#[derive(Debug, Clone)]
-pub struct AppState {
+#[derive(Debug)]
+pub struct App {
     pub review: Review,
-    pub view_mode: ViewMode,
+    pub current_tab: AppTab,
+    pub should_quit: bool,
+    pub all_issues: Vec<CodeIssue>,
+    pub filtered_issues: Vec<usize>,
     pub selected_issue_index: usize,
+    pub selected_file_index: usize,
+    pub scroll_position: usize,
+    pub issue_list_state: ListState,
+    pub file_list_state: ListState,
+    pub show_issue_detail: bool,
+    pub status_message: Option<String>,
     pub selected_category: Option<IssueCategory>,
     pub selected_severity: Option<Severity>,
-    pub all_issues: Vec<CodeIssue>,
-    pub filtered_issues: Vec<usize>, // indices into all_issues
-    #[allow(dead_code)]
-    pub scroll_position: usize,
-    #[allow(dead_code)]
-    pub show_help: bool,
+    pub help_scroll: usize,
 }
 
-impl AppState {
+impl App {
     pub fn new(review: Review) -> Self {
         let all_issues = Self::collect_all_issues(&review);
-        let filtered_issues = (0..all_issues.len()).collect();
+        let filtered_issues: Vec<usize> = (0..all_issues.len()).collect();
+        let mut issue_list_state = ListState::default();
+        if !filtered_issues.is_empty() {
+            issue_list_state.select(Some(0));
+        }
+        let mut file_list_state = ListState::default();
+        file_list_state.select(Some(0));
 
         Self {
             review,
-            view_mode: ViewMode::Overview,
-            selected_issue_index: 0,
-            selected_category: None,
-            selected_severity: None,
+            current_tab: AppTab::Overview,
+            should_quit: false,
             all_issues,
             filtered_issues,
+            selected_issue_index: 0,
+            selected_file_index: 0,
             scroll_position: 0,
-            show_help: false,
+            issue_list_state,
+            file_list_state,
+            show_issue_detail: false,
+            status_message: None,
+            selected_category: None,
+            selected_severity: None,
+            help_scroll: 0,
         }
     }
 
     fn collect_all_issues(review: &Review) -> Vec<CodeIssue> {
         let mut issues = Vec::new();
         for category_issues in review.issues.values() {
-            issues.extend(category_issues.clone());
+            for issue in category_issues {
+                issues.push(issue.clone());
+            }
         }
         // Sort by severity (Critical first)
         issues.sort_by(|a, b| {
@@ -71,11 +104,11 @@ impl AppState {
                 let category_match = self
                     .selected_category
                     .as_ref()
-                    .is_none_or(|cat| &issue.category == cat);
+                    .map_or(true, |cat| &issue.category == cat);
                 let severity_match = self
                     .selected_severity
                     .as_ref()
-                    .is_none_or(|sev| &issue.severity == sev);
+                    .map_or(true, |sev| &issue.severity == sev);
                 category_match && severity_match
             })
             .map(|(idx, _)| idx)
@@ -84,19 +117,19 @@ impl AppState {
         if self.selected_issue_index >= self.filtered_issues.len() {
             self.selected_issue_index = 0;
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn get_current_issue(&self) -> Option<&CodeIssue> {
-        self.filtered_issues
-            .get(self.selected_issue_index)
-            .and_then(|&idx| self.all_issues.get(idx))
+        
+        // Update list state
+        if !self.filtered_issues.is_empty() {
+            self.issue_list_state.select(Some(self.selected_issue_index));
+        } else {
+            self.issue_list_state.select(None);
+        }
     }
 
     pub fn next_issue(&mut self) {
         if !self.filtered_issues.is_empty() {
-            self.selected_issue_index =
-                (self.selected_issue_index + 1) % self.filtered_issues.len();
+            self.selected_issue_index = (self.selected_issue_index + 1) % self.filtered_issues.len();
+            self.issue_list_state.select(Some(self.selected_issue_index));
         }
     }
 
@@ -107,12 +140,93 @@ impl AppState {
             } else {
                 self.filtered_issues.len() - 1
             };
+            self.issue_list_state.select(Some(self.selected_issue_index));
+        }
+    }
+
+    pub fn next_tab(&mut self) {
+        self.current_tab = match self.current_tab {
+            AppTab::Overview => AppTab::Issues,
+            AppTab::Issues => AppTab::Files,
+            AppTab::Files => AppTab::Reports,
+            AppTab::Reports => AppTab::Help,
+            AppTab::Help => AppTab::Overview,
+        };
+        self.show_issue_detail = false;
+    }
+
+    pub fn prev_tab(&mut self) {
+        self.current_tab = match self.current_tab {
+            AppTab::Overview => AppTab::Help,
+            AppTab::Issues => AppTab::Overview,
+            AppTab::Files => AppTab::Issues,
+            AppTab::Reports => AppTab::Files,
+            AppTab::Help => AppTab::Reports,
+        };
+        self.show_issue_detail = false;
+    }
+
+    pub fn get_current_issue(&self) -> Option<&CodeIssue> {
+        self.filtered_issues
+            .get(self.selected_issue_index)
+            .and_then(|&idx| self.all_issues.get(idx))
+    }
+
+    pub fn get_files(&self) -> Vec<String> {
+        self.review
+            .branch_comparison
+            .commits_analyzed
+            .iter()
+            .flat_map(|c| &c.files_changed)
+            .cloned()
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect()
+    }
+
+    pub fn clear_filters(&mut self) {
+        self.selected_category = None;
+        self.selected_severity = None;
+        self.apply_filters();
+        self.status_message = Some("Filters cleared".to_string());
+    }
+
+    pub fn generate_report(&mut self, report_type: u8) {
+        match report_type {
+            1 => {
+                let report = self.generate_review_report();
+                if std::fs::write("code_review_report.md", &report).is_ok() {
+                    self.status_message = Some("✅ Full report saved to code_review_report.md".to_string());
+                } else {
+                    self.status_message = Some("❌ Failed to save report".to_string());
+                }
+            }
+            2 => {
+                let summary = generate_summary_report(self);
+                if std::fs::write("code_review_summary.md", &summary).is_ok() {
+                    self.status_message = Some("✅ Summary saved to code_review_summary.md".to_string());
+                } else {
+                    self.status_message = Some("❌ Failed to save summary".to_string());
+                }
+            }
+            3 => {
+                let critical_report = generate_critical_issues_report(self);
+                if std::fs::write("critical_issues.md", &critical_report).is_ok() {
+                    self.status_message = Some("✅ Critical issues report saved to critical_issues.md".to_string());
+                } else {
+                    self.status_message = Some("❌ Failed to save critical issues report".to_string());
+                }
+            }
+            _ => {}
         }
     }
 
     pub fn generate_review_report(&self) -> String {
-        let mut report = String::new();
+        if self.all_issues.is_empty() {
+            return "No issues found in this review.".to_string();
+        }
 
+        let mut report = String::new();
         report.push_str("# Code Review Report\n\n");
         report.push_str(&format!(
             "**Branches Compared:** {} → {}\n",
@@ -124,531 +238,400 @@ impl AppState {
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
         ));
 
-        // Executive Summary
-        report.push_str("## Executive Summary\n\n");
-        let critical_count = self
-            .all_issues
-            .iter()
-            .filter(|i| matches!(i.severity, Severity::Critical))
-            .count();
-        let high_count = self
-            .all_issues
-            .iter()
-            .filter(|i| matches!(i.severity, Severity::High))
-            .count();
-        let total_issues = self.all_issues.len();
+        // Add issues details
+        for (i, issue) in self.all_issues.iter().enumerate() {
+            let severity_icon = match issue.severity {
+                Severity::Critical => "🚨",
+                Severity::High => "⚠️",
+                Severity::Medium => "🔶",
+                Severity::Low => "ℹ️",
+                Severity::Info => "💡",
+            };
 
-        if critical_count > 0 {
             report.push_str(&format!(
-                "⚠️ **CRITICAL:** {critical_count} critical issues require immediate attention before merge.\n"
+                "## {} Issue {}: {:?}\n\n",
+                severity_icon,
+                i + 1,
+                issue.category
             ));
-        }
-        if high_count > 0 {
-            report.push_str(&format!(
-                "🔶 **HIGH:** {high_count} high-priority issues should be addressed.\n"
-            ));
-        }
-        report.push_str(&format!(
-            "📊 **Total Issues:** {} findings across {} files.\n\n",
-            total_issues, self.review.metrics.files_modified
-        ));
-
-        // Change Metrics
-        report.push_str("## Change Metrics\n\n");
-        report.push_str(&format!(
-            "- **Files Modified:** {}\n",
-            self.review.metrics.files_modified
-        ));
-        report.push_str(&format!(
-            "- **Lines Added:** {}\n",
-            self.review.metrics.lines_added
-        ));
-        report.push_str(&format!(
-            "- **Lines Removed:** {}\n",
-            self.review.metrics.lines_removed
-        ));
-        report.push_str(&format!(
-            "- **Commits Analyzed:** {}\n\n",
-            self.review.branch_comparison.commits_analyzed.len()
-        ));
-
-        // Priority Issues
-        if critical_count > 0 || high_count > 0 {
-            report.push_str("## Priority Issues\n\n");
-            for issue in &self.all_issues {
-                if matches!(issue.severity, Severity::Critical | Severity::High) {
-                    let severity_icon = match issue.severity {
-                        Severity::Critical => "🚨",
-                        Severity::High => "⚠️",
-                        _ => "",
-                    };
-                    report.push_str(&format!(
-                        "{} **{:?}** in `{}`\n",
-                        severity_icon, issue.category, issue.file_path
-                    ));
-                    if let Some(line) = issue.line_number {
-                        report.push_str(&format!("   Line {}: {}\n", line, issue.description));
-                    } else {
-                        report.push_str(&format!("   {}\n", issue.description));
-                    }
-                    report.push_str(&format!("   *Recommendation:* {}\n\n", issue.suggestion));
-                }
+            report.push_str(&format!("**File:** `{}`\n", issue.file_path));
+            if let Some(line) = issue.line_number {
+                report.push_str(&format!("**Line:** {line}\n"));
             }
-        }
+            report.push_str(&format!("**Severity:** {:?}\n\n", issue.severity));
+            report.push_str(&format!("**Problem:** {}\n\n", issue.description));
+            report.push_str(&format!("**Solution:** {}\n\n", issue.suggestion));
 
-        // Issues by Category
-        report.push_str("## Issues by Category\n\n");
-        let mut category_issues: std::collections::HashMap<&IssueCategory, Vec<&CodeIssue>> =
-            std::collections::HashMap::new();
-        for issue in &self.all_issues {
-            category_issues
-                .entry(&issue.category)
-                .or_default()
-                .push(issue);
-        }
-
-        for (category, issues) in category_issues.iter() {
-            report.push_str(&format!("### {:?} ({} issues)\n\n", category, issues.len()));
-            for issue in issues {
-                let severity_badge = match issue.severity {
-                    Severity::Critical => "🚨 Critical",
-                    Severity::High => "⚠️ High",
-                    Severity::Medium => "🔶 Medium",
-                    Severity::Low => "ℹ️ Low",
-                    Severity::Info => "💡 Info",
-                };
-                report.push_str(&format!("- **{}** `{}` ", severity_badge, issue.file_path));
-                if let Some(line) = issue.line_number {
-                    report.push_str(&format!("(Line {line})"));
-                }
-                report.push_str(&format!(
-                    "\n  {}\n  *Fix:* {}\n\n",
-                    issue.description, issue.suggestion
-                ));
+            if let Some(ref snippet) = issue.code_snippet {
+                report.push_str("**Code Location:**\n```\n");
+                report.push_str(snippet);
+                report.push_str("\n```\n\n");
             }
-        }
-
-        // AI Assessment
-        if !self.review.overall_assessment.is_empty() {
-            report.push_str("## AI Analysis\n\n");
-            report.push_str(&self.review.overall_assessment);
-            report.push_str("\n\n");
-        }
-
-        // Recommendations
-        if !self.review.priority_recommendations.is_empty() {
-            report.push_str("## Recommendations\n\n");
-            for rec in &self.review.priority_recommendations {
-                report.push_str(&format!("- {rec}\n"));
-            }
-            report.push('\n');
-        }
-
-        // Technology Stack
-        if !self
-            .review
-            .technology_stack
-            .programming_languages
-            .is_empty()
-        {
-            report.push_str("## Technology Stack\n\n");
-            report.push_str(&format!(
-                "**Languages:** {}\n",
-                self.review
-                    .technology_stack
-                    .programming_languages
-                    .join(", ")
-            ));
-            if !self.review.technology_stack.tools.is_empty() {
-                report.push_str(&format!(
-                    "**Tools:** {}\n",
-                    self.review.technology_stack.tools.join(", ")
-                ));
-            }
+            report.push_str("---\n\n");
         }
 
         report
     }
 }
 
-// Simple terminal-based UI runner
+// Ratatui-based TUI implementation
 pub async fn run_tui(review: Review) -> anyhow::Result<()> {
-    println!("🚀 Starting interactive review interface...");
+    // Setup terminal
+    enable_raw_mode()?;
+    let mut stdout = stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
 
-    let mut state = AppState::new(review);
+    // Create app and run
+    let mut app = App::new(review);
+    let res = run_app(&mut terminal, &mut app).await;
 
-    // Simple text-based UI
-    loop {
-        // Clear screen
-        print!("\x1B[2J\x1B[1;1H");
+    // Restore terminal
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
 
-        // Print current view
-        match state.view_mode {
-            ViewMode::Overview => print_overview(&state),
-            ViewMode::IssuesList => print_issues_list(&state),
-            ViewMode::IssueDetail(idx) => print_issue_detail(&state, idx),
-            ViewMode::ReportGeneration => print_report_generation(&state),
-            ViewMode::Files => print_files_view(&state),
-        }
-
-        // Get user input
-        println!("\nEnter command (h for help): ");
-        print!("> ");
-        io::stdout().flush()?;
-
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
-        let command = input.trim();
-
-        // Handle commands
-        match command {
-            "q" | "quit" => break,
-            "h" | "help" => {
-                print_help();
-                println!("\nPress Enter to continue...");
-                let mut _input = String::new();
-                io::stdin().read_line(&mut _input)?;
-            }
-            "o" | "overview" => state.view_mode = ViewMode::Overview,
-            "i" | "issues" => state.view_mode = ViewMode::IssuesList,
-            "r" | "report" => state.view_mode = ViewMode::ReportGeneration,
-            "f" | "files" => state.view_mode = ViewMode::Files,
-            "j" | "down" | "n" | "next" => state.next_issue(),
-            "k" | "up" | "p" | "prev" => state.prev_issue(),
-            "enter" | "details" => {
-                if matches!(state.view_mode, ViewMode::IssuesList) {
-                    if let Some(&issue_idx) = state.filtered_issues.get(state.selected_issue_index)
-                    {
-                        state.view_mode = ViewMode::IssueDetail(issue_idx);
-                    }
-                }
-            }
-            "b" | "back" => {
-                if matches!(state.view_mode, ViewMode::IssueDetail(_)) {
-                    state.view_mode = ViewMode::IssuesList;
-                }
-            }
-            "1" => {
-                if matches!(state.view_mode, ViewMode::ReportGeneration) {
-                    let report = state.generate_review_report();
-                    std::fs::write("code_review_report.md", &report)?;
-                    println!("✅ Full report saved to code_review_report.md");
-                    println!("Press Enter to continue...");
-                    let mut _input = String::new();
-                    io::stdin().read_line(&mut _input)?;
-                }
-            }
-            "2" => {
-                if matches!(state.view_mode, ViewMode::ReportGeneration) {
-                    let summary = generate_summary_report(&state);
-                    std::fs::write("code_review_summary.md", &summary)?;
-                    println!("✅ Summary saved to code_review_summary.md");
-                    println!("Press Enter to continue...");
-                    let mut _input = String::new();
-                    io::stdin().read_line(&mut _input)?;
-                }
-            }
-            "3" => {
-                if matches!(state.view_mode, ViewMode::ReportGeneration) {
-                    let critical_report = generate_critical_issues_report(&state);
-                    std::fs::write("critical_issues.md", &critical_report)?;
-                    println!("✅ Critical issues report saved to critical_issues.md");
-                    println!("Press Enter to continue...");
-                    let mut _input = String::new();
-                    io::stdin().read_line(&mut _input)?;
-                }
-            }
-            "c" | "clear" => {
-                if matches!(state.view_mode, ViewMode::IssuesList) {
-                    state.selected_category = None;
-                    state.selected_severity = None;
-                    state.apply_filters();
-                }
-            }
-            _ => {
-                println!("❌ Unknown command: '{command}'. Type 'h' for help.");
-                println!("Press Enter to continue...");
-                let mut _input = String::new();
-                io::stdin().read_line(&mut _input)?;
-            }
-        }
+    if let Err(err) = res {
+        println!("{:?}", err);
     }
 
-    println!("👋 Thanks for using AI Code Review!");
     Ok(())
 }
 
-fn print_overview(state: &AppState) {
-    println!("📊 Code Review Overview");
-    println!("{}", "=".repeat(50));
-    println!(
-        "🌿 Branches: {} → {}",
-        state.review.branch_comparison.source_branch, state.review.branch_comparison.target_branch
-    );
-    println!("📁 Files Modified: {}", state.review.metrics.files_modified);
-    println!("➕ Lines Added: +{}", state.review.metrics.lines_added);
-    println!("➖ Lines Removed: -{}", state.review.metrics.lines_removed);
-    println!("🐛 Total Issues: {}", state.all_issues.len());
-    println!(
-        "📝 Commits: {}",
-        state.review.branch_comparison.commits_analyzed.len()
-    );
+// Add missing run_app function
+async fn run_app<B: Backend>(
+    terminal: &mut Terminal<B>,
+    app: &mut App,
+) -> anyhow::Result<()> {
+    loop {
+        terminal.draw(|f| ui(f, app))?;
 
-    let critical_count = state
-        .all_issues
-        .iter()
-        .filter(|i| matches!(i.severity, Severity::Critical))
-        .count();
-    let high_count = state
-        .all_issues
-        .iter()
-        .filter(|i| matches!(i.severity, Severity::High))
-        .count();
-    let medium_count = state
-        .all_issues
-        .iter()
-        .filter(|i| matches!(i.severity, Severity::Medium))
-        .count();
-    let low_count = state
-        .all_issues
-        .iter()
-        .filter(|i| matches!(i.severity, Severity::Low))
-        .count();
-
-    println!("\n🚨 Issues by Severity:");
-    if critical_count > 0 {
-        println!("   🔴 Critical: {critical_count}");
-    }
-    if high_count > 0 {
-        println!("   🟠 High: {high_count}");
-    }
-    if medium_count > 0 {
-        println!("   🟡 Medium: {medium_count}");
-    }
-    if low_count > 0 {
-        println!("   🟢 Low: {low_count}");
-    }
-
-    if !state.review.priority_recommendations.is_empty() {
-        println!("\n⚡ Priority Recommendations:");
-        for rec in &state.review.priority_recommendations {
-            println!("   • {rec}");
-        }
-    }
-
-    println!("\n📋 Commands: [i]ssues, [r]eport, [f]iles, [q]uit, [h]elp");
-}
-
-fn print_issues_list(state: &AppState) {
-    println!(
-        "🐛 Issues List ({}/{})",
-        state.filtered_issues.len(),
-        state.all_issues.len()
-    );
-    println!("{}", "=".repeat(50));
-
-    if state.filtered_issues.is_empty() {
-        println!("✅ No issues found with current filters.");
-        println!("\n📋 Commands: [o]verview, [c]lear filters, [q]uit");
-        return;
-    }
-
-    // Show up to 10 issues around the selected one
-    let start = state.selected_issue_index.saturating_sub(5);
-    let end = (start + 10).min(state.filtered_issues.len());
-
-    for i in start..end {
-        if let Some(&issue_idx) = state.filtered_issues.get(i) {
-            if let Some(issue) = state.all_issues.get(issue_idx) {
-                let marker = if i == state.selected_issue_index {
-                    "► "
-                } else {
-                    "  "
-                };
-                let severity_icon = match issue.severity {
-                    Severity::Critical => "🔴",
-                    Severity::High => "🟠",
-                    Severity::Medium => "🟡",
-                    Severity::Low => "🟢",
-                    Severity::Info => "🔵",
-                };
-
-                println!(
-                    "{}{} [{:?}] {} {}",
-                    marker,
-                    severity_icon,
-                    issue.category,
-                    issue.file_path,
-                    if let Some(line) = issue.line_number {
-                        format!(":{line}")
-                    } else {
-                        String::new()
+        if let Event::Key(key) = event::read()? {
+            if key.kind == KeyEventKind::Press {
+                match key.code {
+                    KeyCode::Char('q') => {
+                        app.should_quit = true;
+                        break;
                     }
-                );
-
-                if i == state.selected_issue_index {
-                    println!("     💡 {}", issue.description);
+                    KeyCode::Tab => app.next_tab(),
+                    KeyCode::BackTab => app.prev_tab(),
+                    KeyCode::Char('h') => app.current_tab = AppTab::Help,
+                    KeyCode::Char('o') => app.current_tab = AppTab::Overview,
+                    KeyCode::Char('i') => app.current_tab = AppTab::Issues,
+                    KeyCode::Char('f') => app.current_tab = AppTab::Files,
+                    KeyCode::Char('r') => app.current_tab = AppTab::Reports,
+                    KeyCode::Up | KeyCode::Char('k') => {
+                        match app.current_tab {
+                            AppTab::Issues => app.prev_issue(),
+                            AppTab::Files => {
+                                if app.selected_file_index > 0 {
+                                    app.selected_file_index -= 1;
+                                }
+                            },
+                            _ => {}
+                        }
+                    }
+                    KeyCode::Down | KeyCode::Char('j') => {
+                        match app.current_tab {
+                            AppTab::Issues => app.next_issue(),
+                            AppTab::Files => {
+                                let files = app.get_files();
+                                if app.selected_file_index + 1 < files.len() {
+                                    app.selected_file_index += 1;
+                                }
+                            },
+                            _ => {}
+                        }
+                    }
+                    KeyCode::Enter => {
+                        if app.current_tab == AppTab::Issues {
+                            app.show_issue_detail = !app.show_issue_detail;
+                        }
+                    }
+                    KeyCode::Char('b') => {
+                        if app.current_tab == AppTab::Issues && app.show_issue_detail {
+                            app.show_issue_detail = false;
+                        }
+                    }
+                    KeyCode::Char('c') => {
+                        if app.current_tab == AppTab::Issues {
+                            app.clear_filters();
+                        }
+                    }
+                    KeyCode::Char('1') | KeyCode::Char('2') | KeyCode::Char('3') => {
+                        if app.current_tab == AppTab::Reports {
+                            let report_type = match key.code {
+                                KeyCode::Char('1') => 1,
+                                KeyCode::Char('2') => 2,
+                                KeyCode::Char('3') => 3,
+                                _ => 1,
+                            };
+                            app.generate_report(report_type);
+                        }
+                    }
+                    _ => {}
                 }
             }
         }
     }
-
-    if state.filtered_issues.len() > 10 {
-        println!(
-            "\n... showing {} of {} issues",
-            end - start,
-            state.filtered_issues.len()
-        );
-    }
-
-    println!("\n📋 Commands: [j/k] navigate, [enter] details, [o]verview, [c]lear filters");
+    Ok(())
 }
 
-fn print_issue_detail(state: &AppState, issue_idx: usize) {
-    if let Some(issue) = state.all_issues.get(issue_idx) {
-        println!("🔍 Issue Details");
-        println!("{}", "=".repeat(50));
+// Add missing UI function
+fn ui(f: &mut Frame, app: &mut App) {
+    let size = f.area();
+    
+    // Create main layout
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Header
+            Constraint::Min(0),    // Main content
+            Constraint::Length(1), // Status bar
+        ])
+        .split(size);
 
-        let severity_icon = match issue.severity {
-            Severity::Critical => "🔴",
-            Severity::High => "🟠",
-            Severity::Medium => "🟡",
-            Severity::Low => "🟢",
-            Severity::Info => "🔵",
-        };
+    // Render header with tabs
+    render_header(f, chunks[0], app);
+    
+    // Render main content based on current tab
+    match app.current_tab {
+        AppTab::Overview => render_overview(f, chunks[1], app),
+        AppTab::Issues => render_issues(f, chunks[1], app),
+        AppTab::Files => render_files(f, chunks[1], app),
+        AppTab::Reports => render_reports(f, chunks[1], app),
+        AppTab::Help => render_help(f, chunks[1], app),
+    }
+    
+    // Render status bar
+    render_status_bar(f, chunks[2], app);
+}
 
-        println!("📁 File: {}", issue.file_path);
-        if let Some(line) = issue.line_number {
-            println!("📍 Line: {line}");
+fn render_header(f: &mut Frame, area: Rect, app: &App) {
+    let titles = vec!["Overview", "Issues", "Files", "Reports", "Help"];
+    let index = match app.current_tab {
+        AppTab::Overview => 0,
+        AppTab::Issues => 1,
+        AppTab::Files => 2,
+        AppTab::Reports => 3,
+        AppTab::Help => 4,
+    };
+    
+    let tabs = Tabs::new(titles)
+        .block(Block::default().borders(Borders::ALL).title("AI Code Buddy"))
+        .style(Style::default().fg(Color::White))
+        .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        .select(index);
+    
+    f.render_widget(tabs, area);
+}
+
+fn render_overview(f: &mut Frame, area: Rect, app: &App) {
+    let text = vec![
+        Line::from(vec![Span::styled("📊 Code Review Overview", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]),
+        Line::from(""),
+        Line::from(format!("🌿 Branches: {} → {}", 
+            app.review.branch_comparison.source_branch,
+            app.review.branch_comparison.target_branch)),
+        Line::from(format!("📁 Files Modified: {}", app.review.metrics.files_modified)),
+        Line::from(format!("➕ Lines Added: +{}", app.review.metrics.lines_added)),
+        Line::from(format!("➖ Lines Removed: -{}", app.review.metrics.lines_removed)),
+        Line::from(format!("🐛 Total Issues: {}", app.all_issues.len())),
+    ];
+    
+    let paragraph = Paragraph::new(text)
+        .block(Block::default().borders(Borders::ALL).title("Overview"))
+        .wrap(Wrap { trim: true });
+    
+    f.render_widget(paragraph, area);
+}
+
+fn render_issues(f: &mut Frame, area: Rect, app: &mut App) {
+    if app.show_issue_detail {
+        if let Some(issue) = app.get_current_issue() {
+            render_issue_detail(f, area, issue);
         }
-        println!("📂 Category: {:?}", issue.category);
-        println!("{} Severity: {:?}", severity_icon, issue.severity);
-
-        println!("\n📝 Description:");
-        println!("   {}", issue.description);
-
-        println!("\n💡 Suggestion:");
-        println!("   {}", issue.suggestion);
-
-        if let Some(ref snippet) = issue.code_snippet {
-            println!("\n📄 Code Snippet:");
-            println!("┌{}", "─".repeat(48));
-            for line in snippet.lines() {
-                println!("│ {line}");
-            }
-            println!("└{}", "─".repeat(48));
-        }
-
-        println!("\n📋 Commands: [b]ack, [j/k] navigate issues, [o]verview");
     } else {
-        println!("❌ Issue not found");
+        let items: Vec<ListItem> = app.filtered_issues
+            .iter()
+            .map(|&idx| {
+                if let Some(issue) = app.all_issues.get(idx) {
+                    let severity_icon = match issue.severity {
+                        Severity::Critical => "🔴",
+                        Severity::High => "🟠",
+                        Severity::Medium => "🟡",
+                        Severity::Low => "🟢",
+                        Severity::Info => "🔵",
+                    };
+                    let content = format!("{} [{:?}] {} {}", 
+                        severity_icon, 
+                        issue.category, 
+                        issue.file_path,
+                        if let Some(line) = issue.line_number {
+                            format!(":{}", line)
+                        } else {
+                            String::new()
+                        }
+                    );
+                    ListItem::new(content)
+                } else {
+                    ListItem::new("Invalid issue")
+                }
+            })
+            .collect();
+
+        let issues_list = List::new(items)
+            .block(Block::default().borders(Borders::ALL).title("Issues"))
+            .highlight_style(Style::default().bg(Color::DarkGray))
+            .highlight_symbol("► ");
+
+        f.render_stateful_widget(issues_list, area, &mut app.issue_list_state);
     }
 }
 
-fn print_report_generation(_state: &AppState) {
-    println!("📄 Generate Report");
-    println!("{}", "=".repeat(50));
-    println!("Choose a report format to generate:");
-    println!();
-    println!("1️⃣  Full Markdown Report");
-    println!("     • Complete analysis with all issues");
-    println!("     • AI assessment and recommendations");
-    println!("     • Technology stack information");
-    println!();
-    println!("2️⃣  Executive Summary");
-    println!("     • High-level overview");
-    println!("     • Key metrics and priority issues");
-    println!("     • Quick decision-making format");
-    println!();
-    println!("3️⃣  Critical Issues Only");
-    println!("     • Focus on critical and high-severity issues");
-    println!("     • Immediate action items");
-    println!("     • Risk assessment");
-    println!();
-    println!("📋 Commands: [1/2/3] generate report, [o]verview, [q]uit");
+fn render_issue_detail(f: &mut Frame, area: Rect, issue: &CodeIssue) {
+    let text = vec![
+        Line::from(vec![Span::styled("🔍 Issue Details", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]),
+        Line::from(""),
+        Line::from(format!("📁 File: {}", issue.file_path)),
+        Line::from(format!("📂 Category: {:?}", issue.category)),
+        Line::from(format!("⚠️ Severity: {:?}", issue.severity)),
+        Line::from(""),
+        Line::from(vec![Span::styled("📝 Description:", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from(format!("   {}", issue.description)),
+        Line::from(""),
+        Line::from(vec![Span::styled("💡 Suggestion:", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from(format!("   {}", issue.suggestion)),
+    ];
+    
+    let paragraph = Paragraph::new(text)
+        .block(Block::default().borders(Borders::ALL).title("Issue Detail"))
+        .wrap(Wrap { trim: true });
+    
+    f.render_widget(paragraph, area);
 }
 
-fn print_files_view(state: &AppState) {
-    println!("📁 Changed Files");
-    println!("{}", "=".repeat(50));
-
-    let files: Vec<String> = state
-        .review
-        .branch_comparison
-        .commits_analyzed
+fn render_files(f: &mut Frame, area: Rect, app: &mut App) {
+    let files = app.get_files();
+    let items: Vec<ListItem> = files
         .iter()
-        .flat_map(|c| &c.files_changed)
-        .cloned()
-        .collect::<std::collections::HashSet<_>>()
-        .into_iter()
+        .map(|file| {
+            let issue_count = app.all_issues.iter().filter(|i| i.file_path == *file).count();
+            let icon = if issue_count > 0 {
+                match issue_count {
+                    1..=2 => "🟡",
+                    3..=5 => "🟠",
+                    _ => "🔴",
+                }
+            } else {
+                "✅"
+            };
+            
+            let content = if issue_count > 0 {
+                format!("{} {} ({} issues)", icon, file, issue_count)
+            } else {
+                format!("{} {}", icon, file)
+            };
+            ListItem::new(content)
+        })
         .collect();
 
-    if files.is_empty() {
-        println!("📭 No files found.");
-        return;
-    }
-
-    for file in &files {
-        let issue_count = state
-            .all_issues
-            .iter()
-            .filter(|i| i.file_path == *file)
-            .count();
-
-        let icon = if issue_count > 0 {
-            match issue_count {
-                1..=2 => "🟡",
-                3..=5 => "🟠",
-                _ => "🔴",
-            }
-        } else {
-            "✅"
-        };
-
-        if issue_count > 0 {
-            println!("{icon} {file} ({issue_count} issues)");
-        } else {
-            println!("{icon} {file}");
+    // Update file list state
+    if !files.is_empty() {
+        if app.selected_file_index >= files.len() {
+            app.selected_file_index = 0;
         }
+        app.file_list_state.select(Some(app.selected_file_index));
+    } else {
+        app.file_list_state.select(None);
     }
 
-    println!("\n📊 Legend: ✅ No issues  🟡 Few issues  🟠 Some issues  🔴 Many issues");
-    println!("\n📋 Commands: [o]verview, [i]ssues, [q]uit");
+    let files_list = List::new(items)
+        .block(Block::default().borders(Borders::ALL).title("Changed Files"))
+        .highlight_style(Style::default().bg(Color::DarkGray))
+        .highlight_symbol("► ");
+
+    f.render_stateful_widget(files_list, area, &mut app.file_list_state);
 }
 
-fn print_help() {
-    println!("🆘 Help - AI Code Review Tool");
-    println!("{}", "=".repeat(50));
-    println!("📋 Navigation Commands:");
-    println!("   o, overview    - Show overview screen");
-    println!("   i, issues      - Show issues list");
-    println!("   r, report      - Generate reports");
-    println!("   f, files       - Show changed files");
-    println!("   q, quit        - Exit the application");
-    println!("   h, help        - Show this help");
-    println!();
-    println!("🐛 Issues List Commands:");
-    println!("   j, down, n, next  - Navigate to next issue");
-    println!("   k, up, p, prev    - Navigate to previous issue");
-    println!("   enter, details    - View issue details");
-    println!("   c, clear          - Clear filters");
-    println!();
-    println!("🔍 Issue Detail Commands:");
-    println!("   b, back          - Return to issues list");
-    println!("   j, k             - Navigate between issues");
-    println!();
-    println!("📄 Report Generation:");
-    println!("   1                - Generate full markdown report");
-    println!("   2                - Generate executive summary");
-    println!("   3                - Generate critical issues report");
-    println!();
-    println!("💡 Tips:");
-    println!("   • Reports are saved as markdown files in current directory");
-    println!("   • Use filters in issues list to focus on specific categories");
-    println!("   • Critical and high-severity issues should be addressed first");
+fn render_reports(f: &mut Frame, area: Rect, _app: &App) {
+    let text = vec![
+        Line::from(vec![Span::styled("📄 Generate Report", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]),
+        Line::from(""),
+        Line::from("Choose a report format to generate:"),
+        Line::from(""),
+        Line::from(vec![Span::styled("1️⃣  Full Markdown Report", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from("     • Complete analysis with all issues"),
+        Line::from("     • AI assessment and recommendations"),
+        Line::from(""),
+        Line::from(vec![Span::styled("2️⃣  Executive Summary", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from("     • High-level overview"),
+        Line::from("     • Key metrics and priority issues"),
+        Line::from(""),
+        Line::from(vec![Span::styled("3️⃣  Critical Issues Only", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from("     • Focus on critical and high-severity issues"),
+        Line::from("     • Immediate action items"),
+    ];
+    
+    let paragraph = Paragraph::new(text)
+        .block(Block::default().borders(Borders::ALL).title("Reports"))
+        .wrap(Wrap { trim: true });
+    
+    f.render_widget(paragraph, area);
 }
 
-fn generate_summary_report(state: &AppState) -> String {
+fn render_help(f: &mut Frame, area: Rect, _app: &App) {
+    let text = vec![
+        Line::from(vec![Span::styled("🆘 Help - AI Code Review Tool", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]),
+        Line::from(""),
+        Line::from(vec![Span::styled("📋 Navigation Commands:", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from("   Tab/Shift+Tab - Switch between tabs"),
+        Line::from("   o - Show overview screen"),
+        Line::from("   i - Show issues list"),
+        Line::from("   f - Show changed files"),
+        Line::from("   r - Generate reports"),
+        Line::from("   h - Show this help"),
+        Line::from("   q - Exit the application"),
+        Line::from(""),
+        Line::from(vec![Span::styled("🐛 Issues Commands:", Style::default().add_modifier(Modifier::BOLD))]),
+        Line::from("   ↑/k - Navigate to previous issue"),
+        Line::from("   ↓/j - Navigate to next issue"),
+        Line::from("   Enter - View issue details"),
+        Line::from("   c - Clear filters"),
+    ];
+    
+    let paragraph = Paragraph::new(text)
+        .block(Block::default().borders(Borders::ALL).title("Help"))
+        .wrap(Wrap { trim: true });
+    
+    f.render_widget(paragraph, area);
+}
+
+fn render_status_bar(f: &mut Frame, area: Rect, app: &App) {
+    let status_text = if let Some(ref message) = app.status_message {
+        message.clone()
+    } else {
+        match app.current_tab {
+            AppTab::Overview => "[Tab] switch tabs | [q] quit".to_string(),
+            AppTab::Issues => "[↑↓/jk] navigate | [Enter] details | [c] clear filters | [q] quit".to_string(),
+            AppTab::Files => "[↑↓] navigate | [q] quit".to_string(),
+            AppTab::Reports => "[1/2/3] generate report | [q] quit".to_string(),
+            AppTab::Help => "[Tab] switch tabs | [q] quit".to_string(),
+        }
+    };
+    
+    let status = Paragraph::new(status_text)
+        .style(Style::default().fg(Color::White).bg(Color::DarkGray));
+    
+    f.render_widget(status, area);
+}
+
+fn generate_summary_report(app: &App) -> String {
     format!(
         "# Code Review Executive Summary\n\n\
         **Review Date:** {}\n\
@@ -666,31 +649,27 @@ fn generate_summary_report(state: &AppState) -> String {
         ## AI Assessment\n\
         {}",
         chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
-        state.review.branch_comparison.source_branch,
-        state.review.branch_comparison.target_branch,
-        state.review.metrics.files_modified,
-        state.all_issues.len(),
-        state
-            .all_issues
+        app.review.branch_comparison.source_branch,
+        app.review.branch_comparison.target_branch,
+        app.review.metrics.files_modified,
+        app.all_issues.len(),
+        app.all_issues
             .iter()
             .filter(|i| matches!(i.severity, Severity::Critical))
             .count(),
-        state
-            .all_issues
+        app.all_issues
             .iter()
             .filter(|i| matches!(i.severity, Severity::High))
             .count(),
-        state.review.metrics.lines_added,
-        state.review.metrics.lines_removed,
-        state.review.branch_comparison.commits_analyzed.len(),
-        if state
-            .all_issues
+        app.review.metrics.lines_added,
+        app.review.metrics.lines_removed,
+        app.review.branch_comparison.commits_analyzed.len(),
+        if app.all_issues
             .iter()
             .any(|i| matches!(i.severity, Severity::Critical))
         {
             "🚨 **DO NOT MERGE** - Critical issues require immediate attention."
-        } else if state
-            .all_issues
+        } else if app.all_issues
             .iter()
             .any(|i| matches!(i.severity, Severity::High))
         {
@@ -698,15 +677,14 @@ fn generate_summary_report(state: &AppState) -> String {
         } else {
             "✅ **APPROVED** - No critical issues found. Consider addressing minor findings."
         },
-        state.review.overall_assessment
+        app.review.overall_assessment
     )
 }
 
-fn generate_critical_issues_report(state: &AppState) -> String {
+fn generate_critical_issues_report(app: &App) -> String {
     let mut report = String::from("# Critical Issues Report\n\n");
 
-    let critical_issues: Vec<_> = state
-        .all_issues
+    let critical_issues: Vec<_> = app.all_issues
         .iter()
         .filter(|i| matches!(i.severity, Severity::Critical | Severity::High))
         .collect();

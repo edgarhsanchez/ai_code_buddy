@@ -23,9 +23,8 @@ jobs:
 
     - name: Setup Rust toolchain
       run: |
-        # Use system-installed Rust on self-hosted runner
-        rustup toolchain install ${{ matrix.rust }}
-        rustup default ${{ matrix.rust }}
+        # Verify Rust is available on self-hosted runner
+        rustup show
         rustup component add rustfmt clippy
 
     - name: Cache dependencies
@@ -65,10 +64,8 @@ jobs:
 
     - name: Setup Rust toolchain
       run: |
-        # Use system-installed Rust on self-hosted runner
-        rustup toolchain install stable
-        rustup default stable
-        rustup target add ${{ matrix.target }}
+        # Verify Rust is available on self-hosted runner
+        rustup show
 
     - name: Cache dependencies
       uses: actions/cache@v4

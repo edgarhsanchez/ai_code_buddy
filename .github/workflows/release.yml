@@ -54,10 +54,9 @@ jobs:
 
     - name: Setup Rust toolchain
       run: |
-        # Use system-installed Rust on self-hosted runner
-        rustup toolchain install stable
-        rustup default stable
-        rustup target add ${{ matrix.target }}
+        # Verify Rust is available on self-hosted runner
+        rustup show
+        cargo --version
 
     - name: Install dependencies (macOS)
       run: |

@@ -19,9 +19,8 @@ jobs:
 
     - name: Setup Rust toolchain
       run: |
-        # Use system-installed Rust on self-hosted runner
-        rustup toolchain install stable
-        rustup default stable
+        # Verify Rust is available on self-hosted runner
+        rustup show
 
     - name: Install cargo-audit
       run: cargo install cargo-audit
@@ -43,9 +42,8 @@ jobs:
 
     - name: Setup Rust toolchain
       run: |
-        # Use system-installed Rust on self-hosted runner
-        rustup toolchain install stable
-        rustup default stable
+        # Verify Rust is available on self-hosted runner
+        rustup show
 
     - name: Install cargo-outdated
       run: cargo install cargo-outdated

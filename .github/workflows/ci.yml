@@ -12,20 +12,14 @@ env:
 jobs:
   test:
     name: Test
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, macOS, ARM64]
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         rust: [stable, beta]
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: ${{ matrix.rust }}
 
     - name: Cache dependencies
       uses: actions/cache@v4
@@ -51,28 +45,16 @@ jobs:
 
   build:
     name: Build
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, macOS, ARM64]
     needs: test
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: aarch64-apple-darwin
+          - target: aarch64-apple-darwin
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.target }}
 
     - name: Cache dependencies
       uses: actions/cache@v4
@@ -86,11 +68,13 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Build binary
-      run: cargo build --release --target ${{ matrix.target }}
+      run: |
+        export RUSTFLAGS="-C target-feature=+aes,+sha2,+neon"
+        cargo build --release --target ${{ matrix.target }}
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: ai_code_buddy-${{ matrix.target }}
         path: |
-          target/${{ matrix.target }}/release/ai_code_buddy${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          target/${{ matrix.target }}/release/ai_code_buddy

@@ -878,30 +878,36 @@ async fn perform_code_analysis_with_branch_selection(
             if error_msg.contains("cannot locate") || error_msg.contains("branch") {
                 if cli_mode {
                     // In CLI mode, just show available branches and exit with error
-                    eprintln!("❌ Error: {}", e);
+                    eprintln!("❌ Error: {e}");
                     eprintln!("📋 Available branches in repository:");
-                    
+
                     if let Ok(git_analyzer) = GitAnalyzer::new(repo_path) {
                         if let Ok(branches) = git_analyzer.get_available_branches() {
                             for branch in branches {
-                                eprintln!("  • {}", branch);
+                                eprintln!("  • {branch}");
                             }
                         }
                     }
                     eprintln!("💡 Please specify valid source and target branches using --source and --target flags");
-                    return Err(e);
+                    Err(e)
                 } else {
                     // In TUI mode, show branch selector
-                    eprintln!("⚠️  Branch not found: {}", e);
+                    eprintln!("⚠️  Branch not found: {e}");
                     eprintln!("🌿 Opening branch selector...");
-                    
+
                     match ui_simple::run_branch_selector(repo_path).await {
                         Ok((selected_source, selected_target)) => {
-                            println!("✅ Selected branches: {} → {}", selected_source, selected_target);
-                            perform_code_analysis(&selected_source, &selected_target, repo_path, config).await
+                            println!("✅ Selected branches: {selected_source} → {selected_target}");
+                            perform_code_analysis(
+                                &selected_source,
+                                &selected_target,
+                                repo_path,
+                                config,
+                            )
+                            .await
                         }
                         Err(selector_err) => {
-                            eprintln!("❌ Branch selection failed: {}", selector_err);
+                            eprintln!("❌ Branch selection failed: {selector_err}");
                             Err(e)
                         }
                     }

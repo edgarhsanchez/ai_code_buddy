@@ -21,12 +21,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Rust toolchain
-      run: |
-        # Verify Rust is available on self-hosted runner
-        rustup show
-        rustup component add rustfmt clippy
-
     - name: Cache dependencies
       uses: actions/cache@v4
       with:
@@ -61,11 +55,6 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Setup Rust toolchain
-      run: |
-        # Verify Rust is available on self-hosted runner
-        rustup show
 
     - name: Cache dependencies
       uses: actions/cache@v4

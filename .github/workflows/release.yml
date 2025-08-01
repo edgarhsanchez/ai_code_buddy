@@ -52,12 +52,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Rust toolchain
-      run: |
-        # Verify Rust is available on self-hosted runner
-        rustup show
-        cargo --version
-
     - name: Install dependencies (macOS)
       run: |
         # Check if Homebrew is available, install if needed

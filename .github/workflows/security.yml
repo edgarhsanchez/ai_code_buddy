@@ -17,11 +17,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Rust toolchain
-      run: |
-        # Verify Rust is available on self-hosted runner
-        rustup show
-
     - name: Install cargo-audit
       run: cargo install cargo-audit
 
@@ -39,11 +34,6 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Setup Rust toolchain
-      run: |
-        # Verify Rust is available on self-hosted runner
-        rustup show
 
     - name: Install cargo-outdated
       run: cargo install cargo-outdated

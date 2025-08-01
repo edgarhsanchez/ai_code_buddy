@@ -1,0 +1,11 @@
+[advisories]
+# Ignore the paste unmaintained warning for now
+# as it's used by multiple transitive dependencies and is functionally stable
+ignore = [
+    "RUSTSEC-2024-0436",  # paste crate is unmaintained but functionally stable
+]
+
+[output]
+# Show detailed information about vulnerabilities
+format = "human"
+show-tree = true

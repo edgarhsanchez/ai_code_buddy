@@ -18,10 +18,14 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install cargo-audit
+      shell: bash
       run: cargo install cargo-audit
 
     - name: Run security audit
+      shell: bash
       run: |
+        echo "Current directory: $(pwd)"
+        echo "Running security audit with ignored vulnerabilities..."
         # TEMPORARY: Ignore known vulnerabilities while working on resolution
         # RUSTSEC-2020-0071: time 0.1.45 vulnerability from kalosm dependency chain
         # RUSTSEC-2024-0436: paste crate unmaintained (functionally stable)

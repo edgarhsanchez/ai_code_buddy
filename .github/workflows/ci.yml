@@ -21,6 +21,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install Rust toolchain
+      shell: bash
+      run: |
+        if [ "${{ matrix.rust }}" = "beta" ]; then
+          rustup toolchain install beta
+          rustup default beta
+        else
+          rustup default stable
+        fi
+
     - name: Cache dependencies
       uses: actions/cache@v4
       with:
@@ -30,16 +40,22 @@ jobs:
           ~/.cargo/registry/cache
           ~/.cargo/git/db
           target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Run tests
-      run: cargo test --verbose
+      shell: bash
+      run: |
+        echo "Current directory: $(pwd)"
+        echo "Rust version: $(rustc --version)"
+        cargo test --verbose
 
     - name: Check formatting
+      shell: bash
       run: cargo fmt -- --check
       if: matrix.rust == 'stable'
 
     - name: Run clippy
+      shell: bash
       run: cargo clippy -- -D warnings
       if: matrix.rust == 'stable'
 
@@ -68,6 +84,7 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Build binary
+      shell: bash
       run: |
         export RUSTFLAGS="-C target-feature=+aes,+sha2,+neon"
         cargo build --release --target ${{ matrix.target }}

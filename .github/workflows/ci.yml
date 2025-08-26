@@ -8,6 +8,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # Ensure cargo uses the correct workspace path
+  CARGO_HOME: ${{ github.workspace }}/.cargo
 
 jobs:
   test:
@@ -23,6 +25,7 @@ jobs:
 
     - name: Install Rust toolchain
       shell: bash
+      working-directory: ${{ github.workspace }}
       run: |
         if [ "${{ matrix.rust }}" = "beta" ]; then
           rustup toolchain install beta
@@ -44,6 +47,7 @@ jobs:
 
     - name: Run tests
       shell: bash
+      working-directory: ${{ github.workspace }}
       run: |
         echo "Current directory: $(pwd)"
         echo "Rust version: $(rustc --version)"
@@ -51,11 +55,13 @@ jobs:
 
     - name: Check formatting
       shell: bash
+      working-directory: ${{ github.workspace }}
       run: cargo fmt -- --check
       if: matrix.rust == 'stable'
 
     - name: Run clippy
       shell: bash
+      working-directory: ${{ github.workspace }}
       run: cargo clippy -- -D warnings
       if: matrix.rust == 'stable'
 
@@ -85,6 +91,7 @@ jobs:
 
     - name: Build binary
       shell: bash
+      working-directory: ${{ github.workspace }}
       run: |
         export RUSTFLAGS="-C target-feature=+aes,+sha2,+neon"
         cargo build --release --target ${{ matrix.target }}

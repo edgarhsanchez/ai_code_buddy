@@ -4,7 +4,7 @@ use crossterm::event::{KeyCode, KeyEventKind, MouseEventKind};
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Style, Modifier},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, StatefulWidgetRef, WidgetRef},
 };
@@ -29,14 +29,11 @@ impl Plugin for OverviewPlugin {
     }
 }
 
-fn initialize_overview_state(
-    mut overview_state: ResMut<OverviewWidgetState>,
-    args: Res<Args>,
-) {
+fn initialize_overview_state(mut overview_state: ResMut<OverviewWidgetState>, args: Res<Args>) {
     overview_state.repo_info.path = args.repo_path.clone();
     overview_state.repo_info.source_branch = args.source_branch.clone();
     overview_state.repo_info.target_branch = args.target_branch.clone();
-    
+
     // TODO: Calculate files to analyze
     overview_state.repo_info.files_to_analyze = 42; // Placeholder
 }
@@ -55,7 +52,7 @@ fn overview_event_handler(
                         overview_state.show_help = false;
                         return;
                     }
-                    
+
                     match key_event.code {
                         KeyCode::Tab => {
                             overview_state.move_selection(SelectionDirection::Next);
@@ -69,16 +66,17 @@ fn overview_event_handler(
                         KeyCode::Down => {
                             overview_state.move_selection(SelectionDirection::Next);
                         }
-                        KeyCode::Enter => {
-                            match overview_state.selected_component {
-                                OverviewComponent::Help => {
-                                    overview_state.show_help = !overview_state.show_help;
-                                }
-                                _ => {
-                                    handle_selection(&overview_state.selected_component, &mut app_events);
-                                }
+                        KeyCode::Enter => match overview_state.selected_component {
+                            OverviewComponent::Help => {
+                                overview_state.show_help = !overview_state.show_help;
                             }
-                        }
+                            _ => {
+                                handle_selection(
+                                    &overview_state.selected_component,
+                                    &mut app_events,
+                                );
+                            }
+                        },
                         _ => {}
                     }
                 }
@@ -91,13 +89,17 @@ fn overview_event_handler(
                     }
                     return;
                 }
-                
+
                 match mouse_event.kind {
                     MouseEventKind::Up(_) => {
                         let x = mouse_event.column;
                         let y = mouse_event.row;
-                        
-                        let components: Vec<_> = overview_state.registered_components.clone().into_iter().collect();
+
+                        let components: Vec<_> = overview_state
+                            .registered_components
+                            .clone()
+                            .into_iter()
+                            .collect();
                         for (component, _rect) in components {
                             if overview_state.is_over(component.clone(), x, y) {
                                 overview_state.selected_component = component.clone();
@@ -180,22 +182,22 @@ impl StatefulWidgetRef for OverviewWidget {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),  // Title
-                Constraint::Length(8),  // Repository info
-                Constraint::Min(10),    // Menu buttons
-                Constraint::Length(3),  // Status bar
+                Constraint::Length(3), // Title
+                Constraint::Length(8), // Repository info
+                Constraint::Min(10),   // Menu buttons
+                Constraint::Length(3), // Status bar
             ])
             .split(area);
 
         // Render title
         self.render_title(chunks[0], buf);
-        
+
         // Render repository info
         self.render_repo_info(chunks[1], buf, state);
-        
+
         // Render menu
         self.render_menu(chunks[2], buf, state);
-        
+
         // Render status bar
         self.render_status_bar(chunks[3], buf);
     }
@@ -209,7 +211,7 @@ impl OverviewWidget {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .border_style(THEME.header_style())
+                    .border_style(THEME.header_style()),
             );
         title.render_ref(area, buf);
     }
@@ -239,10 +241,10 @@ impl OverviewWidget {
                 Block::default()
                     .borders(Borders::ALL)
                     .title("Repository Information")
-                    .title_style(THEME.header_style())
+                    .title_style(THEME.header_style()),
             )
             .wrap(ratatui::widgets::Wrap { trim: true });
-        
+
         repo_info.render_ref(area, buf);
     }
 
@@ -256,9 +258,9 @@ impl OverviewWidget {
                 Constraint::Percentage(20),
             ])
             .split(area);
-        
+
         let menu_area = menu_layout[1];
-        
+
         let items_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -275,31 +277,41 @@ impl OverviewWidget {
             .split(menu_area);
 
         self.render_menu_button(
-            items_layout[0], buf, state,
+            items_layout[0],
+            buf,
+            state,
             OverviewComponent::StartAnalysis,
             "🚀 Start Analysis",
         );
-        
+
         self.render_menu_button(
-            items_layout[2], buf, state,
+            items_layout[2],
+            buf,
+            state,
             OverviewComponent::ViewReports,
             "📊 View Reports",
         );
-        
+
         self.render_menu_button(
-            items_layout[4], buf, state,
+            items_layout[4],
+            buf,
+            state,
             OverviewComponent::Settings,
             "⚙️  Settings",
         );
-        
+
         self.render_menu_button(
-            items_layout[6], buf, state,
+            items_layout[6],
+            buf,
+            state,
             OverviewComponent::Help,
             "❓ Help",
         );
-        
+
         self.render_menu_button(
-            items_layout[8], buf, state,
+            items_layout[8],
+            buf,
+            state,
             OverviewComponent::Exit,
             "🚪 Exit",
         );
@@ -315,7 +327,7 @@ impl OverviewWidget {
     ) {
         let is_selected = state.selected_component == component;
         let is_hovered = state.hovered_component == Some(component.clone());
-        
+
         let style = if is_selected {
             THEME.selected_style()
         } else if is_hovered {
@@ -338,7 +350,7 @@ impl OverviewWidget {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .border_style(border_style)
+                    .border_style(border_style),
             );
 
         button.render_ref(area, buf);
@@ -352,9 +364,9 @@ impl OverviewWidget {
             .block(
                 Block::default()
                     .borders(Borders::TOP)
-                    .border_style(THEME.info_style())
+                    .border_style(THEME.info_style()),
             );
-        
+
         status.render_ref(area, buf);
     }
 
@@ -369,7 +381,7 @@ impl OverviewWidget {
                     Constraint::Percentage(20),
                 ])
                 .split(area);
-            
+
             Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([
@@ -412,8 +424,12 @@ impl OverviewWidget {
             Line::from("  • ❓ Help: Show this help screen"),
             Line::from("  • 🚪 Exit: Quit the application"),
             Line::from(""),
-            Line::from(Span::styled("Press any key or click anywhere to close help", 
-                      Style::default().fg(THEME.accent).add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(
+                "Press any key or click anywhere to close help",
+                Style::default()
+                    .fg(THEME.accent)
+                    .add_modifier(Modifier::BOLD),
+            )),
         ];
 
         let help_dialog = Paragraph::new(help_content)
@@ -422,13 +438,15 @@ impl OverviewWidget {
                     .borders(Borders::ALL)
                     .title(" Help & Controls ")
                     .title_style(THEME.title_style())
-                    .border_style(THEME.primary_style())
+                    .border_style(THEME.primary_style()),
             )
             .wrap(ratatui::widgets::Wrap { trim: true });
 
         help_dialog.render_ref(help_area, buf);
 
         // Register the entire help area as clickable to close help
-        state.registered_components.insert(OverviewComponent::Help, help_area);
+        state
+            .registered_components
+            .insert(OverviewComponent::Help, help_area);
     }
 }

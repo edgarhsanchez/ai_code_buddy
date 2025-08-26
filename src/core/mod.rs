@@ -9,7 +9,10 @@ use anyhow::Result;
 pub fn run_cli_mode(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     println!("🔍 AI Code Review Tool v0.2.0 (CLI Mode)");
     println!("📂 Repository: {}", args.repo_path);
-    println!("🌿 Comparing: {} → {}", args.source_branch, args.target_branch);
+    println!(
+        "🌿 Comparing: {} → {}",
+        args.source_branch, args.target_branch
+    );
 
     if args.show_credits {
         show_credits();
@@ -84,14 +87,16 @@ fn print_detailed(review: &review::Review) {
             review::CommitStatus::Modified => "modified",
             review::CommitStatus::Untracked => "untracked",
         };
-        println!("{} {} {} (Line {}) [{}]: {}", 
-            severity_icon, commit_icon, issue.file, issue.line, status_text, issue.description);
+        println!(
+            "{} {} {} (Line {}) [{}]: {}",
+            severity_icon, commit_icon, issue.file, issue.line, status_text, issue.description
+        );
     }
 }
 
 fn print_json(review: &review::Review) -> Result<()> {
     let json = serde_json::to_string_pretty(review)?;
-    println!("{}", json);
+    println!("{json}");
     Ok(())
 }
 
@@ -107,12 +112,22 @@ fn print_markdown(review: &review::Review) {
     println!("\n## Issues\n");
     for issue in &review.issues {
         let status_badge = match issue.commit_status {
-            review::CommitStatus::Committed => "![Committed](https://img.shields.io/badge/status-committed-green)",
-            review::CommitStatus::Staged => "![Staged](https://img.shields.io/badge/status-staged-yellow)",
-            review::CommitStatus::Modified => "![Modified](https://img.shields.io/badge/status-modified-red)",
-            review::CommitStatus::Untracked => "![Untracked](https://img.shields.io/badge/status-untracked-blue)",
+            review::CommitStatus::Committed => {
+                "![Committed](https://img.shields.io/badge/status-committed-green)"
+            }
+            review::CommitStatus::Staged => {
+                "![Staged](https://img.shields.io/badge/status-staged-yellow)"
+            }
+            review::CommitStatus::Modified => {
+                "![Modified](https://img.shields.io/badge/status-modified-red)"
+            }
+            review::CommitStatus::Untracked => {
+                "![Untracked](https://img.shields.io/badge/status-untracked-blue)"
+            }
         };
-        println!("- **{}:{}** - {} - {} {} - {}", 
-            issue.file, issue.line, issue.severity, status_badge, issue.category, issue.description);
+        println!(
+            "- **{}:{}** - {} - {} {} - {}",
+            issue.file, issue.line, issue.severity, status_badge, issue.category, issue.description
+        );
     }
 }

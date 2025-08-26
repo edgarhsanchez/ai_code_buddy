@@ -11,11 +11,11 @@ use ratatui::{
 
 use crate::{
     bevy_states::app::AppState,
-    events::{reports::ReportsEvent, app::AppEvent},
+    events::{app::AppEvent, reports::ReportsEvent},
     theme::THEME,
     widget_states::{
         analysis::AnalysisWidgetState,
-        reports::{ReportsWidgetState, ReportFormat, ExportStatus, ViewMode},
+        reports::{ExportStatus, ReportFormat, ReportsWidgetState, ViewMode},
     },
 };
 
@@ -79,17 +79,17 @@ fn reports_event_handler(
                                     reports_state.next_format();
                                 }
                                 KeyCode::Enter => {
-                                match reports_state.view_mode {
-                                    ViewMode::Selection => {
-                                        // Generate and show the report
-                                        reports_state.generate_report();
-                                    }
-                                    ViewMode::Report => {
-                                        // Export the current report
-                                        export_report(&mut reports_state);
+                                    match reports_state.view_mode {
+                                        ViewMode::Selection => {
+                                            // Generate and show the report
+                                            reports_state.generate_report();
+                                        }
+                                        ViewMode::Report => {
+                                            // Export the current report
+                                            export_report(&mut reports_state);
+                                        }
                                     }
                                 }
-                            }
                                 KeyCode::Char('a') => {
                                     app_events.send(AppEvent::SwitchTo(AppState::Analysis));
                                 }
@@ -114,18 +114,19 @@ fn export_report(reports_state: &mut ReportsWidgetState) {
             ReportFormat::Json => "json".to_string(),
             ReportFormat::Markdown => "markdown".to_string(),
         };
-        
+
         reports_state.start_export(format.clone());
-        
+
         // TODO: Implement actual file export
-        let filename = format!("code_review_report.{}", 
+        let filename = format!(
+            "code_review_report.{}",
             match reports_state.selected_format {
                 ReportFormat::Json => "json",
                 ReportFormat::Markdown => "md",
                 _ => "txt",
             }
         );
-        
+
         reports_state.complete_export(filename);
     }
 }
@@ -156,9 +157,9 @@ impl StatefulWidgetRef for ReportsWidget {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),  // Title
-                Constraint::Min(10),    // Content
-                Constraint::Length(3),  // Status bar
+                Constraint::Length(3), // Title
+                Constraint::Min(10),   // Content
+                Constraint::Length(3), // Status bar
             ])
             .split(area);
 
@@ -167,14 +168,14 @@ impl StatefulWidgetRef for ReportsWidget {
             ViewMode::Selection => "📊 Reports & Export",
             ViewMode::Report => "📄 Generated Report",
         };
-        
+
         let title = Paragraph::new(title_text)
             .style(THEME.title_style())
             .alignment(Alignment::Center)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .border_style(THEME.header_style())
+                    .border_style(THEME.header_style()),
             );
         title.render_ref(chunks[0], buf);
 
@@ -212,9 +213,9 @@ impl ReportsWidget {
             Block::default()
                 .borders(Borders::ALL)
                 .title("No Data")
-                .title_style(THEME.warning_style())
+                .title_style(THEME.warning_style()),
         );
-        
+
         content.render_ref(area, buf);
     }
 
@@ -222,51 +223,69 @@ impl ReportsWidget {
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Percentage(40),  // Format selection
-                Constraint::Percentage(60),  // Preview/Export
+                Constraint::Percentage(40), // Format selection
+                Constraint::Percentage(60), // Preview/Export
             ])
             .split(area);
 
         // Format selection
         self.render_format_selection(chunks[0], buf, state);
-        
+
         // Preview/Export area
         self.render_export_area(chunks[1], buf, state);
     }
 
     fn render_format_selection(&self, area: Rect, buf: &mut Buffer, state: &ReportsWidgetState) {
-        let formats = vec![
-            ("Summary", ReportFormat::Summary, "Quick overview with key findings"),
-            ("Detailed", ReportFormat::Detailed, "Complete issue breakdown"),
+        let formats = [
+            (
+                "Summary",
+                ReportFormat::Summary,
+                "Quick overview with key findings",
+            ),
+            (
+                "Detailed",
+                ReportFormat::Detailed,
+                "Complete issue breakdown",
+            ),
             ("JSON", ReportFormat::Json, "Machine-readable format"),
-            ("Markdown", ReportFormat::Markdown, "Documentation-friendly format"),
+            (
+                "Markdown",
+                ReportFormat::Markdown,
+                "Documentation-friendly format",
+            ),
         ];
 
-        let items: Vec<ListItem> = formats.iter().map(|(name, format, description)| {
-            let is_selected = *format == state.selected_format;
-            let style = if is_selected {
-                THEME.selected_style()
-            } else {
-                Style::default()
-            };
+        let items: Vec<ListItem> = formats
+            .iter()
+            .map(|(name, format, description)| {
+                let is_selected = *format == state.selected_format;
+                let style = if is_selected {
+                    THEME.selected_style()
+                } else {
+                    Style::default()
+                };
 
-            ListItem::new(vec![
-                Line::from(vec![
-                    Span::styled(*name, if is_selected { THEME.selected_style() } else { THEME.text_primary.into() }),
-                ]),
-                Line::from(vec![
-                    Span::styled(*description, THEME.info_style()),
-                ]),
-            ]).style(style)
-        }).collect();
+                ListItem::new(vec![
+                    Line::from(vec![Span::styled(
+                        *name,
+                        if is_selected {
+                            THEME.selected_style()
+                        } else {
+                            THEME.text_primary.into()
+                        },
+                    )]),
+                    Line::from(vec![Span::styled(*description, THEME.info_style())]),
+                ])
+                .style(style)
+            })
+            .collect();
 
-        let format_list = List::new(items)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Export Format")
-                    .title_style(THEME.header_style())
-            );
+        let format_list = List::new(items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Export Format")
+                .title_style(THEME.header_style()),
+        );
 
         WidgetRef::render_ref(&format_list, area, buf);
     }
@@ -276,24 +295,30 @@ impl ReportsWidget {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(8),   // Preview
-                    Constraint::Length(5),   // Export button
-                    Constraint::Min(3),      // Export status
+                    Constraint::Length(8), // Preview
+                    Constraint::Length(5), // Export button
+                    Constraint::Min(3),    // Export status
                 ])
                 .split(area);
 
             // Preview
             self.render_preview(chunks[0], buf, state, review);
-            
+
             // Export button
             self.render_export_button(chunks[1], buf);
-            
+
             // Export status
             self.render_export_status(chunks[2], buf, state);
         }
     }
 
-    fn render_preview(&self, area: Rect, buf: &mut Buffer, state: &ReportsWidgetState, review: &crate::core::review::Review) {
+    fn render_preview(
+        &self,
+        area: Rect,
+        buf: &mut Buffer,
+        state: &ReportsWidgetState,
+        review: &crate::core::review::Review,
+    ) {
         let preview_content = match state.selected_format {
             ReportFormat::Summary => {
                 vec![
@@ -304,7 +329,7 @@ impl ReportsWidget {
                     Line::from(format!("Critical: {}", review.critical_issues)),
                     Line::from(format!("High: {}", review.high_issues)),
                 ]
-            },
+            }
             ReportFormat::Detailed => {
                 vec![
                     Line::from("# Detailed Code Review Report"),
@@ -314,17 +339,24 @@ impl ReportsWidget {
                     Line::from(format!("- {} High priority issues", review.high_issues)),
                     Line::from("(Full details in exported file)"),
                 ]
-            },
+            }
             ReportFormat::Json => {
                 vec![
                     Line::from("{"),
-                    Line::from("  \"files_count\": {},".replace("{}", &review.files_count.to_string())),
-                    Line::from("  \"issues_count\": {},".replace("{}", &review.issues_count.to_string())),
-                    Line::from("  \"critical_issues\": {},".replace("{}", &review.critical_issues.to_string())),
+                    Line::from(
+                        "  \"files_count\": {},".replace("{}", &review.files_count.to_string()),
+                    ),
+                    Line::from(
+                        "  \"issues_count\": {},".replace("{}", &review.issues_count.to_string()),
+                    ),
+                    Line::from(
+                        "  \"critical_issues\": {},"
+                            .replace("{}", &review.critical_issues.to_string()),
+                    ),
                     Line::from("  \"issues\": [...]"),
                     Line::from("}"),
                 ]
-            },
+            }
             ReportFormat::Markdown => {
                 vec![
                     Line::from("# Code Review Report"),
@@ -335,7 +367,7 @@ impl ReportsWidget {
                     Line::from(""),
                     Line::from("## Issues"),
                 ]
-            },
+            }
         };
 
         let preview = Paragraph::new(preview_content)
@@ -343,10 +375,10 @@ impl ReportsWidget {
                 Block::default()
                     .borders(Borders::ALL)
                     .title("Preview")
-                    .title_style(THEME.header_style())
+                    .title_style(THEME.header_style()),
             )
             .wrap(ratatui::widgets::Wrap { trim: true });
-        
+
         preview.render_ref(area, buf);
     }
 
@@ -357,21 +389,23 @@ impl ReportsWidget {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .border_style(Style::default().fg(THEME.primary))
+                    .border_style(Style::default().fg(THEME.primary)),
             );
-        
+
         button.render_ref(area, buf);
     }
 
     fn render_export_status(&self, area: Rect, buf: &mut Buffer, state: &ReportsWidgetState) {
         let (status_text, status_style) = match &state.export_status {
             ExportStatus::None => ("Ready to export".to_string(), THEME.info_style()),
-            ExportStatus::Exporting(format) => {
-                (format!("Exporting {} report...", format), THEME.warning_style())
-            },
-            ExportStatus::Success(path) => {
-                (format!("✅ Exported successfully to: {}", path), THEME.success_style())
-            },
+            ExportStatus::Exporting(format) => (
+                format!("Exporting {format} report..."),
+                THEME.warning_style(),
+            ),
+            ExportStatus::Success(path) => (
+                format!("✅ Exported successfully to: {path}"),
+                THEME.success_style(),
+            ),
         };
 
         let status = Paragraph::new(status_text)
@@ -381,9 +415,9 @@ impl ReportsWidget {
                 Block::default()
                     .borders(Borders::ALL)
                     .title("Status")
-                    .title_style(THEME.header_style())
+                    .title_style(THEME.header_style()),
             );
-        
+
         status.render_ref(area, buf);
     }
 
@@ -396,9 +430,7 @@ impl ReportsWidget {
                     "A to run analysis, Esc to go back"
                 }
             }
-            ViewMode::Report => {
-                "Enter to export report, Esc to go back to selection"
-            }
+            ViewMode::Report => "Enter to export report, Esc to go back to selection",
         };
 
         let status = Paragraph::new(status_text)
@@ -407,9 +439,9 @@ impl ReportsWidget {
             .block(
                 Block::default()
                     .borders(Borders::TOP)
-                    .border_style(THEME.info_style())
+                    .border_style(THEME.info_style()),
             );
-        
+
         status.render_ref(area, buf);
     }
 
@@ -425,7 +457,8 @@ impl ReportsWidget {
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
-                        .title(format!(" {} Report ", 
+                        .title(format!(
+                            " {} Report ",
                             match state.selected_format {
                                 ReportFormat::Summary => "Summary",
                                 ReportFormat::Detailed => "Detailed",
@@ -433,7 +466,7 @@ impl ReportsWidget {
                                 ReportFormat::Markdown => "Markdown",
                             }
                         ))
-                        .title_style(THEME.header_style())
+                        .title_style(THEME.header_style()),
                 )
                 .wrap(ratatui::widgets::Wrap { trim: false })
                 .scroll((0, 0)); // TODO: Add scrolling support
@@ -446,7 +479,7 @@ impl ReportsWidget {
                     Block::default()
                         .borders(Borders::ALL)
                         .title("Error")
-                        .title_style(THEME.error_style())
+                        .title_style(THEME.error_style()),
                 );
             error.render_ref(area, buf);
         }

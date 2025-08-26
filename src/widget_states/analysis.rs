@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::core::review::Review;
+use bevy::prelude::*;
 
 #[derive(Debug, Clone, Resource)]
 pub struct AnalysisWidgetState {
@@ -29,25 +29,26 @@ impl AnalysisWidgetState {
         self.current_file.clear();
         self.review = None;
     }
-    
+
     pub fn update_progress(&mut self, progress: f64, current_file: String) {
         self.progress = progress;
         self.current_file = current_file;
     }
-    
+
     pub fn complete_analysis(&mut self, review: Review) {
         self.is_analyzing = false;
         self.progress = 100.0;
         self.review = Some(review);
         self.selected_issue = 0;
     }
-    
+
     pub fn move_issue_selection(&mut self, direction: i32) {
         if let Some(review) = &self.review {
             if !review.issues.is_empty() {
                 let new_selection = (self.selected_issue as i32 + direction)
                     .max(0)
-                    .min(review.issues.len() as i32 - 1) as usize;
+                    .min(review.issues.len() as i32 - 1)
+                    as usize;
                 self.selected_issue = new_selection;
             }
         }

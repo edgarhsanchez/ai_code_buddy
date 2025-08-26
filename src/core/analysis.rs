@@ -1,5 +1,9 @@
 use crate::args::Args;
-use crate::core::{ai_analyzer::{AIAnalyzer, AnalysisRequest, ProgressUpdate}, git::GitAnalyzer, review::Review};
+use crate::core::{
+    ai_analyzer::{AIAnalyzer, AnalysisRequest, ProgressUpdate},
+    git::GitAnalyzer,
+    review::Review,
+};
 use anyhow::Result;
 use tokio::sync::mpsc;
 
@@ -8,15 +12,14 @@ pub async fn perform_analysis_with_progress(
     progress_callback: Option<Box<dyn Fn(f64, String) + Send + Sync>>,
 ) -> Result<Review> {
     println!("📊 Starting AI-powered analysis...");
-    
+
     let git_analyzer = GitAnalyzer::new(&args.repo_path)?;
-    
+
     // Get changed files between branches
-    let changed_files = git_analyzer
-        .get_changed_files(&args.source_branch, &args.target_branch)?;
-    
+    let changed_files = git_analyzer.get_changed_files(&args.source_branch, &args.target_branch)?;
+
     println!("📈 Found {} changed files", changed_files.len());
-    
+
     let mut review = Review {
         files_count: changed_files.len(),
         issues_count: 0,
@@ -35,10 +38,10 @@ pub async fn perform_analysis_with_progress(
         println!("🚀 GPU acceleration enabled (auto-detected or requested)");
     }
     let ai_analyzer = AIAnalyzer::new(use_gpu).await?;
-    
+
     // Create progress channel
     let (progress_tx, mut progress_rx) = mpsc::unbounded_channel::<ProgressUpdate>();
-    
+
     // Spawn task to handle progress updates
     if let Some(callback) = progress_callback {
         tokio::spawn(async move {
@@ -58,20 +61,22 @@ pub async fn perform_analysis_with_progress(
     let total_files = changed_files.len() as f64;
     for (index, file_path) in changed_files.iter().enumerate() {
         if should_analyze_file(file_path, args) {
-            let commit_status = git_analyzer.get_file_status(file_path)
+            let commit_status = git_analyzer
+                .get_file_status(file_path)
                 .unwrap_or(crate::core::review::CommitStatus::Committed);
-            
+
             let status_indicator = match commit_status {
                 crate::core::review::CommitStatus::Committed => "📄",
                 crate::core::review::CommitStatus::Staged => "📑",
                 crate::core::review::CommitStatus::Modified => "📝",
                 crate::core::review::CommitStatus::Untracked => "📄",
             };
-            
+
             let file_progress = (index as f64 / total_files) * 100.0;
-            println!("  {} Analyzing: {} ({:?}) [{:.1}%]", 
-                status_indicator, file_path, commit_status, file_progress);
-            
+            println!(
+                "  {status_indicator} Analyzing: {file_path} ({commit_status:?}) [{file_progress:.1}%]"
+            );
+
             if let Ok(content) = git_analyzer.get_file_content(file_path, &args.target_branch) {
                 let request = AnalysisRequest {
                     file_path: file_path.clone(),
@@ -79,8 +84,11 @@ pub async fn perform_analysis_with_progress(
                     language: detect_language(file_path),
                     commit_status,
                 };
-                
-                match ai_analyzer.analyze_file(request, Some(progress_tx.clone())).await {
+
+                match ai_analyzer
+                    .analyze_file(request, Some(progress_tx.clone()))
+                    .await
+                {
                     Ok(file_issues) => {
                         for issue in file_issues {
                             match issue.severity.as_str() {
@@ -95,17 +103,20 @@ pub async fn perform_analysis_with_progress(
                         }
                     }
                     Err(e) => {
-                        eprintln!("⚠️  Failed to analyze {}: {}", file_path, e);
+                        eprintln!("⚠️  Failed to analyze {file_path}: {e}");
                     }
                 }
             }
         }
     }
-    
+
     // Close progress channel
     drop(progress_tx);
-    
-    println!("✅ AI analysis complete! Found {} issues.", review.issues_count);
+
+    println!(
+        "✅ AI analysis complete! Found {} issues.",
+        review.issues_count
+    );
     Ok(review)
 }
 
@@ -118,28 +129,31 @@ pub fn perform_analysis(args: &Args) -> Result<Review> {
 fn should_analyze_file(file_path: &str, args: &Args) -> bool {
     // Check include patterns
     if !args.include_patterns.is_empty() {
-        let matches_include = args.include_patterns.iter()
+        let matches_include = args
+            .include_patterns
+            .iter()
             .any(|pattern| file_matches_pattern(file_path, pattern));
         if !matches_include {
             return false;
         }
     }
-    
+
     // Check exclude patterns
     for pattern in &args.exclude_patterns {
         if file_matches_pattern(file_path, pattern) {
             return false;
         }
     }
-    
+
     // Default exclusions
-    if file_path.starts_with("target/") 
+    if file_path.starts_with("target/")
         || file_path.contains("node_modules/")
         || file_path.ends_with(".lock")
-        || file_path.ends_with(".log") {
+        || file_path.ends_with(".log")
+    {
         return false;
     }
-    
+
     true
 }
 
@@ -148,8 +162,7 @@ fn file_matches_pattern(file_path: &str, pattern: &str) -> bool {
     if pattern.starts_with("*.") {
         let extension = &pattern[1..];
         file_path.ends_with(extension)
-    } else if pattern.ends_with("/**") {
-        let prefix = &pattern[..pattern.len()-3];
+    } else if let Some(prefix) = pattern.strip_suffix("/**") {
         file_path.starts_with(prefix)
     } else {
         file_path.contains(pattern)

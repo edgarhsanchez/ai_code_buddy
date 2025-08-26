@@ -44,7 +44,7 @@ pub struct Args {
     #[arg(
         short = 't',
         long = "target",
-        value_name = "BRANCH", 
+        value_name = "BRANCH",
         default_value = "HEAD",
         help = "Target branch to compare to (default: HEAD)"
     )]

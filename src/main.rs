@@ -1,19 +1,19 @@
 mod widgets {
+    pub mod analysis;
     pub mod overview;
-    pub mod analysis; 
     pub mod reports;
 }
 
 mod widget_states {
-    pub mod overview;
     pub mod analysis;
+    pub mod overview;
     pub mod reports;
 }
 
 mod events {
+    pub mod analysis;
     pub mod app;
     pub mod overview;
-    pub mod analysis;
     pub mod reports;
 }
 
@@ -21,30 +21,27 @@ mod bevy_states {
     pub mod app;
 }
 
-mod theme;
 mod args;
 mod core;
+mod theme;
 
 use std::{error::Error, io::stdout, time::Duration};
 
 use bevy_states::app::AppState;
+use clap::Parser;
 use events::app::AppEvent;
 use widgets::{analysis::AnalysisPlugin, overview::OverviewPlugin, reports::ReportsPlugin};
-use clap::Parser;
 
-use bevy::{
-    app::ScheduleRunnerPlugin, prelude::*,
-    state::app::StatesPlugin,
-};
+use bevy::{app::ScheduleRunnerPlugin, prelude::*, state::app::StatesPlugin};
 use bevy_ratatui::{
-    RatatuiPlugins,
     event::{KeyEvent, MouseEvent},
+    RatatuiPlugins,
 };
 use crossterm::{
-    ExecutableCommand,
     cursor::{DisableBlinking, EnableBlinking, SetCursorStyle},
     event::{DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture},
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -95,14 +92,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn initialize_app(
-    mut next_state: ResMut<NextState<AppState>>,
-    args: Res<args::Args>,
-) {
+fn initialize_app(mut next_state: ResMut<NextState<AppState>>, args: Res<args::Args>) {
     println!("🚀 AI Code Buddy v0.2.0 - Initializing...");
     println!("📂 Repository: {}", args.repo_path);
-    println!("🌿 Branches: {} → {}", args.source_branch, args.target_branch);
-    
+    println!(
+        "🌿 Branches: {} → {}",
+        args.source_branch, args.target_branch
+    );
+
     next_state.set(AppState::Overview);
 }
 
@@ -115,7 +112,7 @@ fn app_events_handler(
     for event in app_events.read() {
         match event {
             AppEvent::SwitchTo(new_state) => {
-                send_app_state.set(new_state.clone());
+                send_app_state.set(*new_state);
             }
             AppEvent::Exit => {
                 app_exit.send_default();
@@ -133,7 +130,7 @@ fn keyboard_events_handler(
     mut app_events: EventWriter<AppEvent>,
 ) {
     let app_state = app_state.get();
-    
+
     for event in keyboard_events.read() {
         // Global key bindings
         if let crossterm::event::KeyCode::Char('q') = event.code {
@@ -165,17 +162,17 @@ fn mouse_events_handler(
     mut reports_events: EventWriter<events::reports::ReportsEvent>,
 ) {
     let app_state = app_state.get();
-    
+
     for event in mouse_events.read() {
         match app_state {
             AppState::Overview => {
-                overview_events.send(events::overview::OverviewEvent::MouseEvent(event.clone()));
+                overview_events.send(events::overview::OverviewEvent::MouseEvent(*event));
             }
             AppState::Analysis => {
-                analysis_events.send(events::analysis::AnalysisEvent::MouseEvent(event.clone()));
+                analysis_events.send(events::analysis::AnalysisEvent::MouseEvent(*event));
             }
             AppState::Reports => {
-                reports_events.send(events::reports::ReportsEvent::MouseEvent(event.clone()));
+                reports_events.send(events::reports::ReportsEvent::MouseEvent(*event));
             }
         }
     }

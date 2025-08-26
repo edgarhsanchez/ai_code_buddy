@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::core::review::Review;
+use bevy::prelude::*;
 use serde_json;
 
 #[derive(Debug, Clone, Resource)]
@@ -13,14 +13,14 @@ pub struct ReportsWidgetState {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ViewMode {
-    Selection,  // Format selection and preview
-    Report,     // Full report display
+    Selection, // Format selection and preview
+    Report,    // Full report display
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ReportFormat {
     Summary,
-    Detailed, 
+    Detailed,
     Json,
     Markdown,
 }
@@ -48,7 +48,7 @@ impl ReportsWidgetState {
     pub fn set_review(&mut self, review: Review) {
         self.review = Some(review);
     }
-    
+
     pub fn next_format(&mut self) {
         self.selected_format = match self.selected_format {
             ReportFormat::Summary => ReportFormat::Detailed,
@@ -57,7 +57,7 @@ impl ReportsWidgetState {
             ReportFormat::Markdown => ReportFormat::Summary,
         };
     }
-    
+
     pub fn previous_format(&mut self) {
         self.selected_format = match self.selected_format {
             ReportFormat::Summary => ReportFormat::Markdown,
@@ -66,11 +66,11 @@ impl ReportsWidgetState {
             ReportFormat::Markdown => ReportFormat::Json,
         };
     }
-    
+
     pub fn start_export(&mut self, format: String) {
         self.export_status = ExportStatus::Exporting(format);
     }
-    
+
     pub fn complete_export(&mut self, path: String) {
         self.export_status = ExportStatus::Success(path);
     }
@@ -122,8 +122,16 @@ impl ReportsWidgetState {
             review.high_issues,
             review.medium_issues,
             review.low_issues,
-            if review.critical_issues > 0 { "⚠️" } else { "✅" },
-            if review.medium_issues > 0 { "📝" } else { "✅" },
+            if review.critical_issues > 0 {
+                "⚠️"
+            } else {
+                "✅"
+            },
+            if review.medium_issues > 0 {
+                "📝"
+            } else {
+                "✅"
+            },
             if review.low_issues > 0 { "💡" } else { "✅" }
         )
     }
@@ -167,7 +175,11 @@ impl ReportsWidgetState {
             for (i, issue) in critical_issues.iter().enumerate() {
                 report.push_str(&format!(
                     "{}. File: {}\n   Line: {}\n   Category: {}\n   Issue: {}\n\n",
-                    i + 1, issue.file, issue.line, issue.category, issue.description
+                    i + 1,
+                    issue.file,
+                    issue.line,
+                    issue.category,
+                    issue.description
                 ));
             }
         }
@@ -179,7 +191,11 @@ impl ReportsWidgetState {
             for (i, issue) in high_issues.iter().enumerate() {
                 report.push_str(&format!(
                     "{}. File: {}\n   Line: {}\n   Category: {}\n   Issue: {}\n\n",
-                    i + 1, issue.file, issue.line, issue.category, issue.description
+                    i + 1,
+                    issue.file,
+                    issue.line,
+                    issue.category,
+                    issue.description
                 ));
             }
         }
@@ -191,7 +207,11 @@ impl ReportsWidgetState {
             for (i, issue) in medium_issues.iter().enumerate() {
                 report.push_str(&format!(
                     "{}. File: {}\n   Line: {}\n   Category: {}\n   Issue: {}\n\n",
-                    i + 1, issue.file, issue.line, issue.category, issue.description
+                    i + 1,
+                    issue.file,
+                    issue.line,
+                    issue.category,
+                    issue.description
                 ));
             }
         }
@@ -203,7 +223,11 @@ impl ReportsWidgetState {
             for (i, issue) in low_issues.iter().enumerate() {
                 report.push_str(&format!(
                     "{}. File: {}\n   Line: {}\n   Category: {}\n   Issue: {}\n\n",
-                    i + 1, issue.file, issue.line, issue.category, issue.description
+                    i + 1,
+                    issue.file,
+                    issue.line,
+                    issue.category,
+                    issue.description
                 ));
             }
         }
@@ -230,9 +254,12 @@ impl ReportsWidgetState {
              - **High priority:** {}\n\
              - **Medium priority:** {}\n\
              - **Low priority:** {}\n\n",
-            review.files_count, review.issues_count,
-            review.critical_issues, review.high_issues,
-            review.medium_issues, review.low_issues
+            review.files_count,
+            review.issues_count,
+            review.critical_issues,
+            review.high_issues,
+            review.medium_issues,
+            review.low_issues
         );
 
         if review.issues.is_empty() {
@@ -244,7 +271,9 @@ impl ReportsWidgetState {
 
         // Group and display issues by severity
         for severity in ["Critical", "High", "Medium", "Low"] {
-            let severity_issues: Vec<_> = review.issues.iter()
+            let severity_issues: Vec<_> = review
+                .issues
+                .iter()
                 .filter(|issue| issue.severity == severity)
                 .collect();
 
@@ -257,7 +286,7 @@ impl ReportsWidgetState {
                     _ => "📝",
                 };
 
-                report.push_str(&format!("### {} {} Priority Issues\n\n", icon, severity));
+                report.push_str(&format!("### {icon} {severity} Priority Issues\n\n"));
 
                 for issue in severity_issues {
                     report.push_str(&format!(

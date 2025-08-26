@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tokio::sync::mpsc;
 
-use crate::core::review::{Issue, CommitStatus};
+use crate::core::review::{CommitStatus, Issue};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisRequest {
@@ -46,24 +46,27 @@ pub struct AIAnalyzer {
 impl AIAnalyzer {
     pub async fn new(use_gpu: bool) -> Result<Self> {
         println!("🧠 Initializing AI analyzer...");
-        
+
         // Detect and configure GPU backend
         let backend = if use_gpu {
             Self::detect_gpu_backend()
         } else {
             GpuBackend::Cpu
         };
-        
-        println!("🔧 Using backend: {:?}", backend);
-        
+
+        println!("🔧 Using backend: {backend:?}");
+
         println!("🔍 AI inference currently disabled due to token sampling issues");
         println!("🔧 Using enhanced rule-based analysis for comprehensive code review");
 
         let analyzer = AIAnalyzer { backend };
-        
+
         // Display the configured backend for diagnostics
-        println!("🔧 AI Analyzer initialized with {} backend", analyzer.get_backend());
-        
+        println!(
+            "🔧 AI Analyzer initialized with {} backend",
+            analyzer.get_backend()
+        );
+
         Ok(analyzer)
     }
 
@@ -121,7 +124,7 @@ impl AIAnalyzer {
         progress_tx: Option<mpsc::UnboundedSender<ProgressUpdate>>,
     ) -> Result<Vec<Issue>> {
         let _language = self.detect_language(&request.file_path);
-        
+
         if let Some(ref tx) = progress_tx {
             let _ = tx.send(ProgressUpdate {
                 current_file: request.file_path.clone(),
@@ -135,7 +138,7 @@ impl AIAnalyzer {
         // AI inference is currently disabled due to token sampling issues
         // Using enhanced rule-based analysis which provides comprehensive coverage
         issues.extend(self.rule_based_analysis(&request)?);
-        
+
         // TODO: Re-enable AI analysis once token sampling issues are resolved
         // The AI methods are preserved below for future use
 
@@ -152,26 +155,31 @@ impl AIAnalyzer {
 
     fn rule_based_analysis(&self, request: &AnalysisRequest) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
-        
+
         for (line_num, line) in request.content.lines().enumerate() {
             let line_number = line_num + 1;
             let line_lower = line.to_lowercase();
-            
+
             // SECURITY PATTERNS
-            
+
             // Hardcoded credentials
-            if (line_lower.contains("password") || line_lower.contains("api_key") || line_lower.contains("secret")) 
-               && line.contains("=") && (line.contains("\"") || line.contains("'")) {
+            if (line_lower.contains("password")
+                || line_lower.contains("api_key")
+                || line_lower.contains("secret"))
+                && line.contains("=")
+                && (line.contains("\"") || line.contains("'"))
+            {
                 issues.push(Issue {
                     file: request.file_path.clone(),
                     line: line_number,
                     severity: "Critical".to_string(),
                     category: "Security".to_string(),
-                    description: "Hardcoded credentials detected - use environment variables".to_string(),
+                    description: "Hardcoded credentials detected - use environment variables"
+                        .to_string(),
                     commit_status: request.commit_status.clone(),
                 });
             }
-            
+
             // Code injection
             if line.contains("eval(") || line.contains("exec(") {
                 issues.push(Issue {
@@ -185,7 +193,10 @@ impl AIAnalyzer {
             }
 
             // SQL injection patterns
-            if line.contains("query") && line.contains("format!") && (line.contains("SELECT") || line.contains("INSERT") || line.contains("UPDATE")) {
+            if line.contains("query")
+                && line.contains("format!")
+                && (line.contains("SELECT") || line.contains("INSERT") || line.contains("UPDATE"))
+            {
                 issues.push(Issue {
                     file: request.file_path.clone(),
                     line: line_number,
@@ -197,8 +208,13 @@ impl AIAnalyzer {
             }
 
             // Command injection patterns
-            if (line.contains("Command::new") || line.contains("subprocess") || line.contains("system(")) 
-               && (line.contains("format!") || line.contains("user_input") || line.contains("args")) {
+            if (line.contains("Command::new")
+                || line.contains("subprocess")
+                || line.contains("system("))
+                && (line.contains("format!")
+                    || line.contains("user_input")
+                    || line.contains("args"))
+            {
                 issues.push(Issue {
                     file: request.file_path.clone(),
                     line: line_number,
@@ -210,7 +226,9 @@ impl AIAnalyzer {
             }
 
             // Path traversal patterns
-            if line.contains("../") && (line.contains("read") || line.contains("open") || line.contains("file")) {
+            if line.contains("../")
+                && (line.contains("read") || line.contains("open") || line.contains("file"))
+            {
                 issues.push(Issue {
                     file: request.file_path.clone(),
                     line: line_number,
@@ -222,19 +240,25 @@ impl AIAnalyzer {
             }
 
             // PERFORMANCE PATTERNS
-            
+
             // Nested loops (O(n²) complexity)
             if line.contains("for") && line.trim().starts_with("for") {
                 // Check if there's another for loop nearby (simple heuristic)
                 let lines: Vec<&str> = request.content.lines().collect();
-                for i in line_num + 1..std::cmp::min(line_num + 10, lines.len()) {
-                    if lines[i].trim().starts_with("for") {
+                for (idx, _) in lines
+                    .iter()
+                    .enumerate()
+                    .take(std::cmp::min(line_num + 10, lines.len()))
+                    .skip(line_num + 1)
+                {
+                    if lines[idx].trim().starts_with("for") {
                         issues.push(Issue {
                             file: request.file_path.clone(),
                             line: line_number,
                             severity: "Medium".to_string(),
                             category: "Performance".to_string(),
-                            description: "Nested loops detected - consider optimization".to_string(),
+                            description: "Nested loops detected - consider optimization"
+                                .to_string(),
                             commit_status: request.commit_status.clone(),
                         });
                         break;
@@ -252,18 +276,20 @@ impl AIAnalyzer {
                             line: line_number,
                             severity: "High".to_string(),
                             category: "Security".to_string(),
-                            description: "Unsafe code block - requires justification and review".to_string(),
+                            description: "Unsafe code block - requires justification and review"
+                                .to_string(),
                             commit_status: request.commit_status.clone(),
                         });
                     }
-                    
+
                     if line.contains("std::ptr::null") {
                         issues.push(Issue {
                             file: request.file_path.clone(),
                             line: line_number,
                             severity: "Critical".to_string(),
                             category: "Security".to_string(),
-                            description: "Null pointer dereference - will cause segfault".to_string(),
+                            description: "Null pointer dereference - will cause segfault"
+                                .to_string(),
                             commit_status: request.commit_status.clone(),
                         });
                     }
@@ -275,7 +301,9 @@ impl AIAnalyzer {
                             line: line_number,
                             severity: "Medium".to_string(),
                             category: "Error Handling".to_string(),
-                            description: "Use expect() or proper error handling instead of unwrap()".to_string(),
+                            description:
+                                "Use expect() or proper error handling instead of unwrap()"
+                                    .to_string(),
                             commit_status: request.commit_status.clone(),
                         });
                     }
@@ -287,7 +315,8 @@ impl AIAnalyzer {
                             line: line_number,
                             severity: "Low".to_string(),
                             category: "Performance".to_string(),
-                            description: "Unnecessary clone - consider borrowing instead".to_string(),
+                            description: "Unnecessary clone - consider borrowing instead"
+                                .to_string(),
                             commit_status: request.commit_status.clone(),
                         });
                     }
@@ -300,7 +329,8 @@ impl AIAnalyzer {
                             line: line_number,
                             severity: "Critical".to_string(),
                             category: "Security".to_string(),
-                            description: "Unsafe deserialization - pickle.loads is dangerous".to_string(),
+                            description: "Unsafe deserialization - pickle.loads is dangerous"
+                                .to_string(),
                             commit_status: request.commit_status.clone(),
                         });
                     }
@@ -323,7 +353,9 @@ impl AIAnalyzer {
                             line: line_number,
                             severity: "Medium".to_string(),
                             category: "Performance".to_string(),
-                            description: "String concatenation in loop - use join() for better performance".to_string(),
+                            description:
+                                "String concatenation in loop - use join() for better performance"
+                                    .to_string(),
                             commit_status: request.commit_status.clone(),
                         });
                     }
@@ -336,7 +368,8 @@ impl AIAnalyzer {
                             line: line_number,
                             severity: "High".to_string(),
                             category: "Security".to_string(),
-                            description: "XSS vulnerability - validate before setting innerHTML".to_string(),
+                            description: "XSS vulnerability - validate before setting innerHTML"
+                                .to_string(),
                             commit_status: request.commit_status.clone(),
                         });
                     }
@@ -348,16 +381,17 @@ impl AIAnalyzer {
                             line: line_number,
                             severity: "Medium".to_string(),
                             category: "Performance".to_string(),
-                            description: "DOM query in loop - cache the element reference".to_string(),
+                            description: "DOM query in loop - cache the element reference"
+                                .to_string(),
                             commit_status: request.commit_status.clone(),
                         });
                     }
                 }
                 _ => {}
             }
-            
+
             // CODE QUALITY PATTERNS
-            
+
             if line.contains("TODO") || line.contains("FIXME") || line.contains("HACK") {
                 issues.push(Issue {
                     file: request.file_path.clone(),
@@ -376,12 +410,15 @@ impl AIAnalyzer {
                     line: line_number,
                     severity: "Low".to_string(),
                     category: "Code Quality".to_string(),
-                    description: format!("Line too long ({} chars) - consider breaking into multiple lines", line.len()),
+                    description: format!(
+                        "Line too long ({} chars) - consider breaking into multiple lines",
+                        line.len()
+                    ),
                     commit_status: request.commit_status.clone(),
                 });
             }
         }
-        
+
         Ok(issues)
     }
 

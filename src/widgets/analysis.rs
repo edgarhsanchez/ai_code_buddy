@@ -54,7 +54,9 @@ fn analysis_event_handler(
                         if key_event.kind == KeyEventKind::Release {
                             match key_event.code {
                                 KeyCode::Enter => {
-                                    if !analysis_state.is_analyzing && analysis_state.review.is_none() {
+                                    if !analysis_state.is_analyzing
+                                        && analysis_state.review.is_none()
+                                    {
                                         start_analysis(&mut analysis_state, &args, &tokio_runtime);
                                     }
                                 }
@@ -92,26 +94,29 @@ fn start_analysis(
     tokio_runtime: &TokioTasksRuntime,
 ) {
     analysis_state.start_analysis();
-    
+
     let args = args.clone();
     tokio_runtime.spawn_background_task(|mut ctx| async move {
         // Create a channel for progress updates
         use tokio::sync::mpsc;
         let (progress_tx, mut progress_rx) = mpsc::unbounded_channel();
-        
+
         // Spawn task to handle progress updates
         let ctx_clone = ctx.clone();
         tokio::spawn(async move {
             let mut ctx = ctx_clone;
             while let Some((progress, current_file)) = progress_rx.recv().await {
                 ctx.run_on_main_thread(move |ctx| {
-                    if let Some(mut analysis_state) = ctx.world.get_resource_mut::<AnalysisWidgetState>() {
+                    if let Some(mut analysis_state) =
+                        ctx.world.get_resource_mut::<AnalysisWidgetState>()
+                    {
                         analysis_state.update_progress(progress, current_file);
                     }
-                }).await;
+                })
+                .await;
             }
         });
-        
+
         // Create progress callback that sends to channel
         let progress_callback = {
             let tx = progress_tx.clone();
@@ -119,28 +124,34 @@ fn start_analysis(
                 let _ = tx.send((progress, current_file));
             }) as Box<dyn Fn(f64, String) + Send + Sync>
         };
-        
+
         // Perform actual AI-powered analysis
         match core::analysis::perform_analysis_with_progress(&args, Some(progress_callback)).await {
             Ok(review) => {
                 // Close progress channel
                 drop(progress_tx);
-                
+
                 ctx.run_on_main_thread(move |ctx| {
-                    if let Some(mut analysis_state) = ctx.world.get_resource_mut::<AnalysisWidgetState>() {
+                    if let Some(mut analysis_state) =
+                        ctx.world.get_resource_mut::<AnalysisWidgetState>()
+                    {
                         analysis_state.complete_analysis(review);
                     }
-                }).await;
+                })
+                .await;
             }
             Err(e) => {
-                eprintln!("AI analysis failed: {}", e);
+                eprintln!("AI analysis failed: {e}");
                 drop(progress_tx);
-                
+
                 ctx.run_on_main_thread(move |ctx| {
-                    if let Some(mut analysis_state) = ctx.world.get_resource_mut::<AnalysisWidgetState>() {
+                    if let Some(mut analysis_state) =
+                        ctx.world.get_resource_mut::<AnalysisWidgetState>()
+                    {
                         analysis_state.is_analyzing = false;
                     }
-                }).await;
+                })
+                .await;
             }
         }
     });
@@ -172,9 +183,9 @@ impl StatefulWidgetRef for AnalysisWidget {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),  // Title
-                Constraint::Min(10),    // Content
-                Constraint::Length(3),  // Status bar
+                Constraint::Length(3), // Title
+                Constraint::Min(10),   // Content
+                Constraint::Length(3), // Status bar
             ])
             .split(area);
 
@@ -185,7 +196,7 @@ impl StatefulWidgetRef for AnalysisWidget {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .border_style(THEME.header_style())
+                    .border_style(THEME.header_style()),
             );
         title.render_ref(chunks[0], buf);
 
@@ -220,9 +231,9 @@ impl AnalysisWidget {
             Block::default()
                 .borders(Borders::ALL)
                 .title("Ready to Analyze")
-                .title_style(THEME.header_style())
+                .title_style(THEME.header_style()),
         );
-        
+
         content.render_ref(area, buf);
     }
 
@@ -230,8 +241,8 @@ impl AnalysisWidget {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(5),  // Progress bar
-                Constraint::Min(3),     // Current file
+                Constraint::Length(5), // Progress bar
+                Constraint::Min(3),    // Current file
             ])
             .split(area);
 
@@ -241,12 +252,12 @@ impl AnalysisWidget {
                 Block::default()
                     .borders(Borders::ALL)
                     .title("Analysis Progress")
-                    .title_style(THEME.header_style())
+                    .title_style(THEME.header_style()),
             )
             .gauge_style(THEME.success_style())
             .percent(state.progress as u16)
             .label(format!("{:.1}%", state.progress));
-        
+
         progress.render_ref(chunks[0], buf);
 
         // Current file
@@ -262,24 +273,30 @@ impl AnalysisWidget {
             Block::default()
                 .borders(Borders::ALL)
                 .title("Status")
-                .title_style(THEME.header_style())
+                .title_style(THEME.header_style()),
         );
-        
+
         current_file.render_ref(chunks[1], buf);
     }
 
-    fn render_results(&self, area: Rect, buf: &mut Buffer, state: &AnalysisWidgetState, review: &crate::core::review::Review) {
+    fn render_results(
+        &self,
+        area: Rect,
+        buf: &mut Buffer,
+        state: &AnalysisWidgetState,
+        review: &crate::core::review::Review,
+    ) {
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Percentage(30),  // Summary
-                Constraint::Percentage(70),  // Issue list
+                Constraint::Percentage(30), // Summary
+                Constraint::Percentage(70), // Issue list
             ])
             .split(area);
 
         // Summary
         self.render_summary(chunks[0], buf, review);
-        
+
         // Issue list
         self.render_issue_list(chunks[1], buf, state, review);
     }
@@ -315,18 +332,23 @@ impl AnalysisWidget {
             ]),
         ];
 
-        let summary = Paragraph::new(summary_lines)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Summary")
-                    .title_style(THEME.header_style())
-            );
-        
+        let summary = Paragraph::new(summary_lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Summary")
+                .title_style(THEME.header_style()),
+        );
+
         summary.render_ref(area, buf);
     }
 
-    fn render_issue_list(&self, area: Rect, buf: &mut Buffer, state: &AnalysisWidgetState, review: &crate::core::review::Review) {
+    fn render_issue_list(
+        &self,
+        area: Rect,
+        buf: &mut Buffer,
+        state: &AnalysisWidgetState,
+        review: &crate::core::review::Review,
+    ) {
         if review.issues.is_empty() {
             let no_issues = Paragraph::new(vec![
                 Line::from(""),
@@ -339,65 +361,71 @@ impl AnalysisWidget {
                 Block::default()
                     .borders(Borders::ALL)
                     .title("Issues")
-                    .title_style(THEME.header_style())
+                    .title_style(THEME.header_style()),
             );
             no_issues.render_ref(area, buf);
             return;
         }
 
-        let items: Vec<ListItem> = review.issues.iter().enumerate().map(|(i, issue)| {
-            let severity_icon = match issue.severity.as_str() {
-                "Critical" => "🚨",
-                "High" => "⚠️",
-                "Medium" => "🔶", 
-                "Low" => "ℹ️",
-                _ => "💡",
-            };
+        let items: Vec<ListItem> = review
+            .issues
+            .iter()
+            .enumerate()
+            .map(|(i, issue)| {
+                let severity_icon = match issue.severity.as_str() {
+                    "Critical" => "🚨",
+                    "High" => "⚠️",
+                    "Medium" => "🔶",
+                    "Low" => "ℹ️",
+                    _ => "💡",
+                };
 
-            let severity_style = match issue.severity.as_str() {
-                "Critical" => THEME.error_style(),
-                "High" => THEME.warning_style(),
-                "Medium" => THEME.warning_style(),
-                "Low" => THEME.info_style(),
-                _ => Style::default(),
-            };
+                let severity_style = match issue.severity.as_str() {
+                    "Critical" => THEME.error_style(),
+                    "High" => THEME.warning_style(),
+                    "Medium" => THEME.warning_style(),
+                    "Low" => THEME.info_style(),
+                    _ => Style::default(),
+                };
 
-            let is_selected = i == state.selected_issue;
-            
-            // Create a multi-line item for better readability
-            let lines = vec![
-                Line::from(vec![
-                    Span::styled(format!("{} ", severity_icon), severity_style),
-                    Span::styled(format!("{}", issue.severity), severity_style),
-                    Span::raw("  "),
-                    Span::styled(format!("{}:{}", issue.file, issue.line), THEME.info_style()),
-                ]),
-                Line::from(vec![
-                    Span::raw("   "),
-                    Span::styled(format!("{}: ", issue.category), THEME.header_style()),
-                    Span::raw(format!("{}", issue.description)),
-                ]),
-                Line::from(""), // Empty line for spacing
-            ];
+                let is_selected = i == state.selected_issue;
 
-            let style = if is_selected {
-                THEME.selected_style()
-            } else {
-                Style::default()
-            };
+                // Create a multi-line item for better readability
+                let lines = vec![
+                    Line::from(vec![
+                        Span::styled(format!("{severity_icon} "), severity_style),
+                        Span::styled(issue.severity.to_string(), severity_style),
+                        Span::raw("  "),
+                        Span::styled(format!("{}:{}", issue.file, issue.line), THEME.info_style()),
+                    ]),
+                    Line::from(vec![
+                        Span::raw("   "),
+                        Span::styled(format!("{}: ", issue.category), THEME.header_style()),
+                        Span::raw(issue.description.to_string()),
+                    ]),
+                    Line::from(""), // Empty line for spacing
+                ];
 
-            ListItem::new(lines).style(style)
-        }).collect();
+                let style = if is_selected {
+                    THEME.selected_style()
+                } else {
+                    Style::default()
+                };
+
+                ListItem::new(lines).style(style)
+            })
+            .collect();
 
         let issue_list = List::new(items)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(format!("Issues ({}/{})", 
-                        state.selected_issue + 1, 
+                    .title(format!(
+                        "Issues ({}/{})",
+                        state.selected_issue + 1,
                         review.issues.len().max(1)
                     ))
-                    .title_style(THEME.header_style())
+                    .title_style(THEME.header_style()),
             )
             .highlight_style(THEME.selected_style());
 
@@ -419,9 +447,9 @@ impl AnalysisWidget {
             .block(
                 Block::default()
                     .borders(Borders::TOP)
-                    .border_style(THEME.info_style())
+                    .border_style(THEME.info_style()),
             );
-        
+
         status.render_ref(area, buf);
     }
 }

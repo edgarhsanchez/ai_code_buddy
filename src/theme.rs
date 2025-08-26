@@ -16,7 +16,7 @@ impl Default for Theme {
     fn default() -> Self {
         Self {
             primary: Color::Cyan,
-            secondary: Color::Blue, 
+            secondary: Color::Blue,
             accent: Color::Magenta,
             background: Color::Black,
             error: Color::Red,
@@ -48,9 +48,7 @@ impl Theme {
     }
 
     pub fn error_style(&self) -> Style {
-        Style::default()
-            .fg(self.error)
-            .add_modifier(Modifier::BOLD)
+        Style::default().fg(self.error).add_modifier(Modifier::BOLD)
     }
 
     pub fn warning_style(&self) -> Style {
@@ -60,8 +58,7 @@ impl Theme {
     }
 
     pub fn info_style(&self) -> Style {
-        Style::default()
-            .fg(self.info)
+        Style::default().fg(self.info)
     }
 
     pub fn selected_style(&self) -> Style {
@@ -78,8 +75,7 @@ impl Theme {
                 .fg(self.background)
                 .add_modifier(Modifier::BOLD)
         } else {
-            Style::default()
-                .fg(self.primary)
+            Style::default().fg(self.primary)
         }
     }
 
@@ -97,15 +93,14 @@ impl Theme {
     }
 
     pub fn primary_style(&self) -> Style {
-        Style::default()
-            .fg(self.primary)
+        Style::default().fg(self.primary)
     }
 }
 
 pub static THEME: Theme = Theme {
     primary: Color::Cyan,
     secondary: Color::Blue,
-    accent: Color::Magenta, 
+    accent: Color::Magenta,
     background: Color::Black,
     error: Color::Red,
     warning: Color::Yellow,

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum OverviewComponent {
     StartAnalysis,
-    ViewReports,  
+    ViewReports,
     Settings,
     Help,
     Exit,
@@ -53,7 +53,7 @@ impl OverviewWidgetState {
             false
         }
     }
-    
+
     pub fn update_hover(&mut self, x: u16, y: u16) {
         self.hovered_component = None;
         for (component, rect) in &self.registered_components {
@@ -63,7 +63,7 @@ impl OverviewWidgetState {
             }
         }
     }
-    
+
     pub fn move_selection(&mut self, direction: SelectionDirection) {
         self.selected_component = match direction {
             SelectionDirection::Next => match self.selected_component {

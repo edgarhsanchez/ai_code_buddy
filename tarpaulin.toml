@@ -1,0 +1,28 @@
+# Tarpaulin configuration to focus coverage on relevant, logic-centric components
+# Reference spec (current): https://github.com/xd009642/tarpaulin/blob/develop/tarpaulin.toml
+
+# Name and manifest can be omitted; tarpaulin will infer from CWD
+# name = "ai-code-buddy"
+# manifest-path = "./Cargo.toml"
+
+# Exclude rendering/entry files and non-source artifacts from coverage
+exclude-files = [
+  "src/widgets/*",   # ratatui/bevy rendering widgets
+  "src/ui*.rs",      # ui.rs, ui_simple.rs, and any UI modules
+  "src/main*.rs",    # binary entrypoints (main.rs, main_simple.rs, etc.)
+  "assets/*",        # static assets
+  "test_files/*"     # sample fixtures not under test
+]
+
+# Include test code in coverage stats
+include-tests = true
+
+# Use LLVM engine (default on macOS)
+engine = "Llvm"
+
+# Test timeout (human-time format)
+test-timeout = "2m"
+
+# Report outputs and location
+generate = ["Html", "Lcov"]
+output-dir = "coverage"

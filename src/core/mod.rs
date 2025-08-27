@@ -131,3 +131,43 @@ fn print_markdown(review: &review::Review) {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::review::{Issue, Review, CommitStatus};
+
+    fn sample_review() -> Review {
+        Review {
+            files_count: 1,
+            issues_count: 1,
+            critical_issues: 1,
+            high_issues: 0,
+            medium_issues: 0,
+            low_issues: 0,
+            issues: vec![Issue{
+                file: "src/lib.rs".into(),
+                line: 1,
+                severity: "Critical".into(),
+                category: "Security".into(),
+                description: "test".into(),
+                commit_status: CommitStatus::Committed,
+            }],
+        }
+    }
+
+    #[test]
+    fn test_print_functions() {
+        let r = sample_review();
+        // Ensure these don't panic
+        print_summary(&r);
+        print_detailed(&r);
+        print_markdown(&r);
+        assert!(print_json(&r).is_ok());
+    }
+
+    #[test]
+    fn test_show_credits() {
+        show_credits();
+    }
+}

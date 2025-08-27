@@ -34,6 +34,16 @@ serde_json = "1.0"
 tokio = { version = "1.47.0", features = ["full"] }
 uuid = { version = "1.11.0", features = ["v4", "fast-rng"] }
 
+[dev-dependencies]
+mockall = "0.13.0"
+pretty_assertions = "1.4.1"
+proptest = "1.5.0"
+rstest = "0.23.0"
+serial_test = "3.1.1"
+tempfile = "3.13.0"
+tokio-test = "0.4.4"
+insta = "1.40.0"
+
 [features]
 default = ["auto-gpu"]
 # Auto-detect and enable GPU features
@@ -57,3 +67,4 @@ opt-level = 3
 [profile.release]
 lto = true
 opt-level = 3
+

@@ -64,8 +64,18 @@ impl GitAnalyzer {
         let statuses = self.repo.statuses(None)?;
 
         for entry in statuses.iter() {
-            if let Some(path) = entry.path() {
-                files.push(path.to_string());
+            let status = entry.status();
+            let is_index_change = status.contains(Status::INDEX_NEW)
+                || status.contains(Status::INDEX_MODIFIED)
+                || status.contains(Status::INDEX_DELETED);
+            let is_worktree_change = status.contains(Status::WT_NEW)
+                || status.contains(Status::WT_MODIFIED)
+                || status.contains(Status::WT_DELETED);
+
+            if is_index_change || is_worktree_change {
+                if let Some(path) = entry.path() {
+                    files.push(path.to_string());
+                }
             }
         }
 

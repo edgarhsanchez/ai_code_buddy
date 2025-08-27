@@ -440,3 +440,113 @@ impl AIAnalyzer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::review::CommitStatus;
+
+    fn make_request(file: &str, content: &str, language: &str) -> AnalysisRequest {
+        AnalysisRequest {
+            file_path: file.to_string(),
+            content: content.to_string(),
+            language: language.to_string(),
+            commit_status: CommitStatus::Modified,
+        }
+    }
+
+    #[test]
+    fn test_detect_language_variants() {
+        let analyzer = AIAnalyzer { backend: GpuBackend::Cpu };
+        assert_eq!(analyzer.detect_language("src/main.rs"), "rust");
+        assert_eq!(analyzer.detect_language("a/b/c.py"), "python");
+        assert_eq!(analyzer.detect_language("index.ts"), "typescript");
+        assert_eq!(analyzer.detect_language("script.js"), "javascript");
+        assert_eq!(analyzer.detect_language("unknown.foo"), "unknown");
+    }
+
+    #[test]
+    fn test_rule_based_analysis_rust_patterns() {
+        let analyzer = AIAnalyzer { backend: GpuBackend::Cpu };
+        let content = r#"
+            // SECURITY
+            let password = "secret";
+            let _ = eval("2+2");
+            let query = format!("SELECT * FROM users");
+            std::process::Command::new("sh").arg(format!("{}", user_input));
+            let _ = std::fs::read("../etc/passwd");
+            // PERFORMANCE
+            for i in 0..10 {
+                for j in 0..10 {}
+            }
+            // RUST SPECIFIC
+            unsafe { /* do unsafe things */ }
+            let p = std::ptr::null();
+            let _ = something.unwrap();
+            let _y = &x.clone();
+            // QUALITY
+            // TODO: fix
+            // Long line next
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        "#;
+        let req = make_request("file.rs", content, "rust");
+        let issues = analyzer.rule_based_analysis(&req).unwrap();
+        assert!(!issues.is_empty());
+        // Ensure we hit multiple categories
+        assert!(issues.iter().any(|i| i.category == "Security"));
+        assert!(issues.iter().any(|i| i.category == "Performance"));
+        assert!(issues.iter().any(|i| i.category == "Code Quality"));
+    }
+
+    #[test]
+    fn test_rule_based_analysis_python_patterns() {
+        let analyzer = AIAnalyzer { backend: GpuBackend::Cpu };
+        let content = r#"
+            import pickle
+            data = pickle.loads(b"...")
+            import yaml
+            result = yaml.load("x: 1")
+            s = "";
+            for i in range(10): s += "x"
+        "#;
+        let req = make_request("script.py", content, "python");
+        let issues = analyzer.rule_based_analysis(&req).unwrap();
+        assert!(issues.iter().any(|i| i.category == "Security"));
+        assert!(issues.iter().any(|i| i.category == "Performance"));
+    }
+
+    #[test]
+    fn test_rule_based_analysis_js_patterns() {
+        let analyzer = AIAnalyzer { backend: GpuBackend::Cpu };
+        let content = r#"
+            let x = "user";
+            element.innerHTML = "<div>" + x;
+            for (let i = 0; i < 10; i++) { document.getElementById("id"); }
+        "#;
+        let req = make_request("script.js", content, "javascript");
+        let issues = analyzer.rule_based_analysis(&req).unwrap();
+        assert!(issues.iter().any(|i| i.category == "Security"));
+        assert!(issues.iter().any(|i| i.category == "Performance"));
+    }
+
+    #[test]
+    fn test_analyze_file_emits_progress_and_issues() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let analyzer = AIAnalyzer::new(false).await.unwrap();
+            let (tx, mut rx) = mpsc::unbounded_channel::<ProgressUpdate>();
+            let req = make_request("file.rs", "let password = \"x\";", "rust");
+            let issues = analyzer.analyze_file(req, Some(tx)).await.unwrap();
+            assert!(!issues.is_empty());
+            // Try receive up to a couple of progress messages (non-blocking)
+            let mut got_any = false;
+            for _ in 0..4 {
+                if rx.try_recv().is_ok() {
+                    got_any = true;
+                    break;
+                }
+            }
+            assert!(got_any, "expected at least one progress message");
+        });
+    }
+}

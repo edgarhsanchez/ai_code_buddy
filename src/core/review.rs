@@ -11,7 +11,7 @@ pub struct Review {
     pub issues: Vec<Issue>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Issue {
     pub file: String,
     pub line: usize,
@@ -21,7 +21,7 @@ pub struct Issue {
     pub commit_status: CommitStatus,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CommitStatus {
     Committed,
     Staged,

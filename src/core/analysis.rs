@@ -187,3 +187,60 @@ fn detect_language(file_path: &str) -> String {
         _ => "unknown".to_string(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mk_args(include: Vec<&str>, exclude: Vec<&str>) -> Args {
+        Args {
+            repo_path: ".".to_string(),
+            source_branch: "main".to_string(),
+            target_branch: "HEAD".to_string(),
+            cli_mode: false,
+            verbose: false,
+            show_credits: false,
+            output_format: crate::args::OutputFormat::Summary,
+            include_patterns: include.into_iter().map(|s| s.to_string()).collect(),
+            exclude_patterns: exclude.into_iter().map(|s| s.to_string()).collect(),
+            use_gpu: false,
+            force_cpu: true,
+        }
+    }
+
+    #[test]
+    fn test_file_matches_pattern_variants() {
+        assert!(file_matches_pattern("src/lib.rs", "*.rs"));
+        assert!(file_matches_pattern("src/core/mod.rs", "src/**"));
+        assert!(file_matches_pattern("foo/bar/baz.txt", "bar"));
+        assert!(!file_matches_pattern("src/lib.rs", "*.py"));
+    }
+
+    #[test]
+    fn test_should_analyze_file_include_exclude() {
+        // Include only rs
+        let args = mk_args(vec!["*.rs"], vec![]);
+        assert!(should_analyze_file("src/lib.rs", &args));
+        assert!(!should_analyze_file("src/app.py", &args));
+
+        // Exclude target and logs by default
+        let args2 = mk_args(vec![], vec![]);
+        assert!(!should_analyze_file("target/debug/build.rs", &args2));
+        assert!(!should_analyze_file("foo/node_modules/pkg/index.js", &args2));
+        assert!(!should_analyze_file("foo/app.log", &args2));
+        assert!(should_analyze_file("src/main.rs", &args2));
+
+        // Explicit exclude wins
+        let args3 = mk_args(vec![], vec!["*.rs"]);
+        assert!(!should_analyze_file("src/lib.rs", &args3));
+    }
+
+    #[test]
+    fn test_detect_language_extensions() {
+        assert_eq!(detect_language("a.rs"), "rust");
+        assert_eq!(detect_language("a.js"), "javascript");
+        assert_eq!(detect_language("a.ts"), "typescript");
+        assert_eq!(detect_language("a.py"), "python");
+        assert_eq!(detect_language("a.unknown"), "unknown");
+    }
+}

@@ -1,0 +1,3 @@
+[alias]
+# Standardized coverage run; respects tarpaulin.toml filters and outputs to coverage/
+coverage = "tarpaulin"

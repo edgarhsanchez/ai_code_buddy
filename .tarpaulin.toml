@@ -1,0 +1,35 @@
+# Tarpaulin configuration to focus coverage on relevant, logic-centric components
+# See: https://github.com/xd009642/tarpaulin#configuration
+
+# Only include core logic and widget-state modules in coverage
+include-files = [
+  "src/core/**",
+  "src/widget_states/**",
+  "src/lib.rs",
+  "src/theme.rs",
+  "src/args.rs"
+]
+
+# Explicitly exclude UI-heavy and non-relevant components from coverage
+# to focus on core logic and widget state transitions only
+exclude-files = [
+  "src/widgets/**",
+  "src/ui*.rs",
+  "src/main*.rs",
+  "src/widget_states/reports.rs",
+  "assets/**",
+  "test_files/**"
+]
+
+# Include test code in coverage stats
+include-tests = true
+
+# Use LLVM engine (default on macOS)
+engine = "Llvm"
+
+# Test timeout in seconds
+timeout = 120
+
+# Report outputs and location
+out = ["Html", "Lcov"]
+output-dir = "coverage"

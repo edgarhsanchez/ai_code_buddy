@@ -117,7 +117,7 @@ pub struct Args {
     pub force_cpu: bool,
 }
 
-#[derive(clap::ValueEnum, Clone, Debug)]
+#[derive(clap::ValueEnum, Clone, Debug, PartialEq)]
 pub enum OutputFormat {
     /// Summary output with key findings
     Summary,

@@ -6,32 +6,69 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 env:
   CARGO_TERM_COLOR: always
-  # Ensure cargo uses the correct workspace path
-  CARGO_HOME: ${{ github.workspace }}/.cargo
 
 jobs:
-  test:
-    name: Test
+  quality-check:
+    name: Quality Check (Format & Lint)
     runs-on: [self-hosted, macOS, ARM64]
-    strategy:
-      matrix:
-        rust: [stable, beta]
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      shell: bash
-      working-directory: ${{ github.workspace }}
+      run: |
+        rustup default stable
+        rustup component add rustfmt clippy
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/cache
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          target
+        key: ${{ runner.os }}-quality-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Check formatting
+      run: cargo fmt -- --check
+
+    - name: Run clippy
+      run: cargo clippy -- -D warnings
+
+    - name: Security audit
+      run: |
+        cargo install cargo-audit
+        # Ignore known vulnerabilities from dependencies (monitor for updates)
+        cargo audit --ignore RUSTSEC-2020-0071 --ignore RUSTSEC-2024-0436 --ignore RUSTSEC-2024-0375 --ignore RUSTSEC-2021-0145
+
+  build-and-test:
+    name: Build, Test & Coverage
+    runs-on: [self-hosted, macOS, ARM64]
+    needs: quality-check
+    strategy:
+      matrix:
+        rust: [stable, beta]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
       run: |
         if [ "${{ matrix.rust }}" = "beta" ]; then
           rustup toolchain install beta
           rustup default beta
         else
           rustup default stable
+          rustup component add llvm-tools-preview
         fi
 
     - name: Cache dependencies
@@ -46,59 +83,81 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Run tests
-      shell: bash
-      working-directory: ${{ github.workspace }}
       run: |
-        echo "Current directory: $(pwd)"
         echo "Rust version: $(rustc --version)"
         cargo test --verbose
 
-    - name: Check formatting
-      shell: bash
-      working-directory: ${{ github.workspace }}
-      run: cargo fmt -- --check
-      if: matrix.rust == 'stable'
-
-    - name: Run clippy
-      shell: bash
-      working-directory: ${{ github.workspace }}
-      run: cargo clippy -- -D warnings
-      if: matrix.rust == 'stable'
-
-  build:
-    name: Build
-    runs-on: [self-hosted, macOS, ARM64]
-    needs: test
-    strategy:
-      matrix:
-        include:
-          - target: aarch64-apple-darwin
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Cache dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/cache
-          ~/.cargo/registry/index
-          ~/.cargo/registry/cache
-          ~/.cargo/git/db
-          target
-        key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Build binary
-      shell: bash
-      working-directory: ${{ github.workspace }}
+    - name: Build release binary
       run: |
         export RUSTFLAGS="-C target-feature=+aes,+sha2,+neon"
-        cargo build --release --target ${{ matrix.target }}
+        cargo build --release
 
-    - name: Upload artifacts
+    - name: Generate coverage report (stable only)
+      if: matrix.rust == 'stable'
+      run: |
+        cargo install cargo-tarpaulin
+        cargo tarpaulin --verbose --timeout 120 --out Json --out Html --no-default-features
+
+    - name: Upload coverage artifacts (stable only)
+      if: matrix.rust == 'stable'
       uses: actions/upload-artifact@v4
       with:
-        name: ai_code_buddy-${{ matrix.target }}
+        name: coverage-report
         path: |
-          target/${{ matrix.target }}/release/ai_code_buddy
+          tarpaulin-report.html
+          tarpaulin-report.json
+        retention-days: 30
+
+    - name: Coverage Summary (stable only)
+      if: matrix.rust == 'stable'
+      run: |
+        if [ -f "tarpaulin-report.json" ]; then
+          COVERAGE=$(grep -o '"coverage":[0-9.]*' tarpaulin-report.json | cut -d':' -f2 | head -1)
+          echo "Current coverage: ${COVERAGE}%"
+          
+          if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+            COLOR="brightgreen"
+          elif (( $(echo "$COVERAGE >= 60" | bc -l) )); then
+            COLOR="yellow"
+          elif (( $(echo "$COVERAGE >= 40" | bc -l) )); then
+            COLOR="orange"
+          else
+            COLOR="red"
+          fi
+          
+          echo "COVERAGE_PERCENT=$COVERAGE" >> $GITHUB_ENV
+          echo "BADGE_COLOR=$COLOR" >> $GITHUB_ENV
+        fi
+
+    - name: Comment PR with coverage (stable only)
+      if: matrix.rust == 'stable' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('tarpaulin-report.json')) {
+            const coverage = process.env.COVERAGE_PERCENT || 'unknown';
+            const color = process.env.BADGE_COLOR || 'red';
+            
+            const comment = `## 📊 Code Coverage Report
+            
+            **Current Coverage**: \`${coverage}%\`
+            
+            ![Coverage](https://img.shields.io/badge/coverage-${coverage}%25-${color}.svg)
+            
+            📁 **Detailed Report**: Check the artifacts for the full HTML coverage report.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
+
+    - name: Upload build artifacts (stable only)
+      if: matrix.rust == 'stable'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ai-code-buddy-aarch64-apple-darwin
+        path: target/release/ai-code-buddy

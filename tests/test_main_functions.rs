@@ -33,6 +33,7 @@ fn build_app_with_state() -> App {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: true,
+            disable_ai: false,
         });
     app
 }
@@ -323,6 +324,7 @@ fn test_initialize_app_with_different_args() {
         include_patterns: vec!["*.rs".to_string()],
         use_gpu: true,
         force_cpu: false,
+        disable_ai: false,
     };
 
     app.add_plugins(StatesPlugin)

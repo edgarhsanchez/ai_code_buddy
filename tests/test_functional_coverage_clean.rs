@@ -183,6 +183,7 @@ fn test_args_structure() {
         include_patterns: vec!["*.rs".to_string()],
         use_gpu: true,
         force_cpu: false,
+        disable_ai: false,
     };
 
     // Verify all fields are accessible
@@ -296,6 +297,7 @@ fn test_output_format_variants() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+            disable_ai: false,
         };
 
         // Verify the format was set correctly

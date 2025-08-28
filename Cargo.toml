@@ -1,6 +1,6 @@
 [package]
 name = "ai-code-buddy"
-version = "v0.4.0"
+version = "0.4.0"
 edition = "2021"
 authors = ["Edgar H. Sanchez <esanchez@m2iab.com>"]
 description = "An AI-powered code review tool with elegant Bevy-based TUI"
@@ -13,27 +13,27 @@ categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 anyhow = "1.0.95"
-bevy = { version = "v0.4.0", default-features = false, features = [
+bevy = { version = "0.4.0", default-features = false, features = [
     "bevy_state"
 ] }
 bevy_ratatui = "0.7.0"
 bevy-tokio-tasks = "0.15.0"
-clap = { version = "v0.4.0", features = ["derive", "env"] }
+clap = { version = "0.4.0", features = ["derive", "env"] }
 color-eyre = "0.6.3"
 crossterm = "0.28.1"
 futures = "0.3.31"
 git2 = "0.19"
 # Avoid pulling GPU backends (e.g., CUDA via cudarc) by default; opt-in via our cargo features
-kalosm = { version = "v0.4.0", default-features = false, features = ["language"] }
+kalosm = { version = "0.4.0", default-features = false, features = ["language"] }
 rat-cursor = "1.2.0"
 rat-event = "1.1.0"
 rat-focus = "0.31.0"
-ratatui = { version = "v0.4.0", features = ["unstable-widget-ref"] }
+ratatui = { version = "0.4.0", features = ["unstable-widget-ref"] }
 regex = "1.11.1"
-serde = { version = "v0.4.0", features = ["derive"] }
+serde = { version = "0.4.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "v0.4.0", features = ["full"] }
-uuid = { version = "v0.4.0", features = ["v4", "fast-rng"] }
+tokio = { version = "0.4.0", features = ["full"] }
+uuid = { version = "0.4.0", features = ["v4", "fast-rng"] }
 
 [dev-dependencies]
 mockall = "0.13.0"

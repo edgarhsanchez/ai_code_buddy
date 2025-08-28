@@ -1821,10 +1821,49 @@ We welcome contributions! Here's how you can help:
 
 5. **Commit and Push**
    ```bash
+   # Use conventional commit format for automated versioning
+   ./commit.sh feat "add amazing feature"
+   
+   # Or commit manually following conventional format:
    git add .
    git commit -m "feat: add amazing feature"
    git push origin feature/amazing-feature
    ```
+
+   ### 📝 Conventional Commits & Automated Versioning
+
+   This project uses **Conventional Commits** for automated semantic versioning and release management.
+
+   **Commit Message Format:**
+   ```
+   type(scope): description
+
+   [optional body]
+
+   [optional footer]
+   ```
+
+   **Types that trigger version bumps:**
+   - `feat:` → **MINOR** version bump (new features)
+   - `fix:` → **PATCH** version bump (bug fixes)
+   - `feat!:` or `BREAKING CHANGE:` → **MAJOR** version bump
+
+   **Quick commit examples:**
+   ```bash
+   ./commit.sh feat "add user authentication system"
+   ./commit.sh fix "resolve memory leak in analysis"
+   ./commit.sh docs "update installation guide"
+   ```
+
+   **Automated Release Process:**
+   When your PR is merged to `main`:
+   1. ✅ Commits are analyzed for version bump type
+   2. ✅ `Cargo.toml` version is automatically updated
+   3. ✅ Git tag is created (e.g., `v1.2.3`)
+   4. ✅ GitHub release is generated with changelog
+   5. ✅ Package is published to crates.io
+
+   📖 **Full Guide:** See [CONVENTIONAL_COMMITS.md](./CONVENTIONAL_COMMITS.md) for detailed information.
 
 6. **Open a Pull Request**
    - Ensure your PR description explains the changes

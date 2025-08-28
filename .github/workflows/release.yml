@@ -6,18 +6,130 @@ on:
       - main
     tags:
       - 'v*'
+  pull_request:
+    branches:
+      - main
+    types: [closed]
 
 permissions:
   contents: write
   packages: write
+  pull-requests: write
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # Automated versioning when PRs are merged to main
+  version-bump:
+    name: Automated Version Bump
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      should_release: ${{ steps.version.outputs.should_release }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install Rust toolchain
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source ~/.cargo/env
+        rustup default stable
+
+    - name: Install cargo-release
+      run: cargo install cargo-release
+
+    - name: Get current version
+      id: current_version
+      run: |
+        CURRENT_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        echo "Current version: $CURRENT_VERSION"
+
+    - name: Analyze commits for version bump
+      id: analyze_commits
+      run: |
+        # Get commits since last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        COMMITS=$(git log --oneline $LAST_TAG..HEAD --pretty=format:"%s" 2>/dev/null || echo "")
+        
+        echo "Analyzing commits since $LAST_TAG:"
+        echo "$COMMITS"
+        
+        # Determine version bump type based on conventional commits
+        BUMP_TYPE="patch"  # default
+        
+        if echo "$COMMITS" | grep -q "^feat!:" || echo "$COMMITS" | grep -q "^BREAKING CHANGE:"; then
+          BUMP_TYPE="major"
+        elif echo "$COMMITS" | grep -q "^feat:"; then
+          BUMP_TYPE="minor"
+        elif echo "$COMMITS" | grep -q "^fix:" || echo "$COMMITS" | grep -q "^perf:"; then
+          BUMP_TYPE="patch"
+        fi
+        
+        echo "Determined bump type: $BUMP_TYPE"
+        echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+
+    - name: Calculate new version
+      id: version
+      run: |
+        CURRENT_VERSION="${{ steps.current_version.outputs.current_version }}"
+        BUMP_TYPE="${{ steps.analyze_commits.outputs.bump_type }}"
+        
+        # Parse current version
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+        
+        case $BUMP_TYPE in
+          major)
+            NEW_MAJOR=$((MAJOR + 1))
+            NEW_VERSION="$NEW_MAJOR.0.0"
+            ;;
+          minor)
+            NEW_MINOR=$((MINOR + 1))
+            NEW_VERSION="$MAJOR.$NEW_MINOR.0"
+            ;;
+          patch)
+            NEW_PATCH=$((PATCH + 1))
+            NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+            ;;
+        esac
+        
+        echo "New version: $NEW_VERSION"
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "should_release=true" >> $GITHUB_OUTPUT
+
+    - name: Update Cargo.toml version
+      run: |
+        NEW_VERSION="${{ steps.version.outputs.new_version }}"
+        sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+        echo "Updated Cargo.toml to version $NEW_VERSION"
+
+    - name: Commit version bump
+      run: |
+        NEW_VERSION="${{ steps.version.outputs.new_version }}"
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add Cargo.toml
+        git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
+        git push
+
+    - name: Create and push new tag
+      run: |
+        NEW_VERSION="${{ steps.version.outputs.new_version }}"
+        TAG_NAME="v$NEW_VERSION"
+        git tag -a "$TAG_NAME" -m "Release $NEW_VERSION"
+        git push origin "$TAG_NAME"
+        echo "Created and pushed tag: $TAG_NAME"
+
   pre-release-checks:
     name: Pre-Release Quality Check
     runs-on: [self-hosted, macOS, ARM64]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.ref_type != 'tag'
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -55,7 +167,7 @@ jobs:
   build-release:
     name: Build Release Binary
     runs-on: [self-hosted, macOS, ARM64]
-    needs: pre-release-checks
+    needs: [pre-release-checks, version-bump]
     if: github.event_name == 'push' && github.ref_type == 'tag'
     outputs:
       version: ${{ steps.version.outputs.version }}

@@ -61,9 +61,12 @@ pub async fn perform_analysis_with_progress(
 
     // Analyze each file
     let total_files = changed_files.len() as f64;
-    
+
     if args.parallel {
-        println!("🚀 Using parallel analysis with {} CPU cores", num_cpus::get());
+        println!(
+            "🚀 Using parallel analysis with {} CPU cores",
+            num_cpus::get()
+        );
         perform_parallel_analysis(
             &changed_files,
             args,
@@ -72,7 +75,8 @@ pub async fn perform_analysis_with_progress(
             progress_tx.clone(),
             total_files,
             &mut review,
-        ).await?;
+        )
+        .await?;
     } else {
         println!("🔄 Using sequential analysis");
         perform_sequential_analysis(
@@ -83,7 +87,8 @@ pub async fn perform_analysis_with_progress(
             progress_tx.clone(),
             total_files,
             &mut review,
-        ).await?;
+        )
+        .await?;
     }
 
     // Close progress channel
@@ -169,7 +174,7 @@ async fn perform_parallel_analysis(
 ) -> Result<()> {
     // First, collect all file data in the main thread (since GitAnalyzer isn't Send)
     let mut file_requests = Vec::new();
-    
+
     for (index, file_path) in changed_files.iter().enumerate() {
         if should_analyze_file(file_path, args) {
             let commit_status = git_analyzer
@@ -188,8 +193,11 @@ async fn perform_parallel_analysis(
         }
     }
 
-    println!("📊 Processing {} files in parallel using {} threads", 
-             file_requests.len(), num_cpus::get());
+    println!(
+        "📊 Processing {} files in parallel using {} threads",
+        file_requests.len(),
+        num_cpus::get()
+    );
 
     // Now process the analysis requests in parallel
     let analysis_results: Vec<_> = file_requests

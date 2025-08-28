@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_ratatui::{terminal::RatatuiContext};
+use bevy_ratatui::terminal::RatatuiContext;
 use crossterm::event::{KeyCode, KeyEventKind, MouseEventKind};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
@@ -22,7 +22,10 @@ impl Plugin for CreditsPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<CreditsEvent>()
             .init_resource::<CreditsWidgetState>()
-            .add_systems(PreUpdate, credits_event_handler.run_if(in_state(AppState::Credits)))
+            .add_systems(
+                PreUpdate,
+                credits_event_handler.run_if(in_state(AppState::Credits)),
+            )
             .add_systems(Update, render_credits.run_if(in_state(AppState::Credits)));
     }
 }
@@ -44,7 +47,8 @@ pub fn credits_event_handler(
                             credits_state.scroll_down();
                         }
                         KeyCode::PageUp => {
-                            credits_state.scroll_offset = credits_state.scroll_offset.saturating_sub(20);
+                            credits_state.scroll_offset =
+                                credits_state.scroll_offset.saturating_sub(20);
                         }
                         KeyCode::PageDown => {
                             credits_state.scroll_offset += 20;
@@ -53,7 +57,8 @@ pub fn credits_event_handler(
                             credits_state.scroll_offset = 0;
                         }
                         KeyCode::End => {
-                            credits_state.scroll_offset = credits_state.total_lines.saturating_sub(20);
+                            credits_state.scroll_offset =
+                                credits_state.total_lines.saturating_sub(20);
                         }
                         KeyCode::Enter | KeyCode::Esc => {
                             app_events.send(AppEvent::SwitchTo(AppState::Overview));
@@ -62,29 +67,27 @@ pub fn credits_event_handler(
                     }
                 }
             }
-            CreditsEvent::MouseEvent(mouse_event) => {
-                match mouse_event.kind {
-                    MouseEventKind::Up(_) => {
-                        let x = mouse_event.column;
-                        let y = mouse_event.row;
+            CreditsEvent::MouseEvent(mouse_event) => match mouse_event.kind {
+                MouseEventKind::Up(_) => {
+                    let x = mouse_event.column;
+                    let y = mouse_event.row;
 
-                        if credits_state.is_over(CreditsComponent::BackToOverview, x, y) {
-                            app_events.send(AppEvent::SwitchTo(AppState::Overview));
-                        } else if credits_state.is_over(CreditsComponent::ScrollUp, x, y) {
-                            credits_state.scroll_up();
-                        } else if credits_state.is_over(CreditsComponent::ScrollDown, x, y) {
-                            credits_state.scroll_down();
-                        }
-                    }
-                    MouseEventKind::ScrollUp => {
+                    if credits_state.is_over(CreditsComponent::BackToOverview, x, y) {
+                        app_events.send(AppEvent::SwitchTo(AppState::Overview));
+                    } else if credits_state.is_over(CreditsComponent::ScrollUp, x, y) {
                         credits_state.scroll_up();
-                    }
-                    MouseEventKind::ScrollDown => {
+                    } else if credits_state.is_over(CreditsComponent::ScrollDown, x, y) {
                         credits_state.scroll_down();
                     }
-                    _ => {}
                 }
-            }
+                MouseEventKind::ScrollUp => {
+                    credits_state.scroll_up();
+                }
+                MouseEventKind::ScrollDown => {
+                    credits_state.scroll_down();
+                }
+                _ => {}
+            },
         }
     }
 }
@@ -144,18 +147,26 @@ fn generate_credits_content(state: &mut CreditsWidgetState) -> Paragraph {
 
     // Project Information
     lines.push(Line::from(""));
-    lines.push(Line::from(vec![
-        Span::styled("📚 About AI Code Buddy", Style::default().add_modifier(Modifier::BOLD)),
-    ]));
-    lines.push(Line::from("An intelligent code analysis tool with elegant Bevy-powered TUI"));
-    lines.push(Line::from("that provides comprehensive code reviews with AI assistance."));
-    lines.push(Line::from("Repository: https://github.com/edgarhsanchez/ai_code_buddy"));
+    lines.push(Line::from(vec![Span::styled(
+        "📚 About AI Code Buddy",
+        Style::default().add_modifier(Modifier::BOLD),
+    )]));
+    lines.push(Line::from(
+        "An intelligent code analysis tool with elegant Bevy-powered TUI",
+    ));
+    lines.push(Line::from(
+        "that provides comprehensive code reviews with AI assistance.",
+    ));
+    lines.push(Line::from(
+        "Repository: https://github.com/edgarhsanchez/ai_code_buddy",
+    ));
     lines.push(Line::from(""));
 
     // Project Contributors
-    lines.push(Line::from(vec![
-        Span::styled("👥 Project Contributors", Style::default().add_modifier(Modifier::BOLD)),
-    ]));
+    lines.push(Line::from(vec![Span::styled(
+        "👥 Project Contributors",
+        Style::default().add_modifier(Modifier::BOLD),
+    )]));
     lines.push(Line::from("─────────────────────"));
 
     let contributors = get_project_contributors();
@@ -168,17 +179,27 @@ fn generate_credits_content(state: &mut CreditsWidgetState) -> Paragraph {
     lines.push(Line::from(""));
 
     // Library Dependencies
-    lines.push(Line::from(vec![
-        Span::styled("📦 Library Dependencies & Licenses", Style::default().add_modifier(Modifier::BOLD)),
-    ]));
+    lines.push(Line::from(vec![Span::styled(
+        "📦 Library Dependencies & Licenses",
+        Style::default().add_modifier(Modifier::BOLD),
+    )]));
     lines.push(Line::from("──────────────────────────────────"));
 
     let libraries = get_library_dependencies();
     for library in libraries {
-        lines.push(Line::from(format!("🔧 {} v{}", library.name, library.version)));
+        lines.push(Line::from(format!(
+            "🔧 {} v{}",
+            library.name, library.version
+        )));
         lines.push(Line::from(format!("   📄 License: {}", library.license)));
-        lines.push(Line::from(format!("   📖 Description: {}", library.description)));
-        lines.push(Line::from(format!("   🔗 Repository: {}", library.repository)));
+        lines.push(Line::from(format!(
+            "   📖 Description: {}",
+            library.description
+        )));
+        lines.push(Line::from(format!(
+            "   🔗 Repository: {}",
+            library.repository
+        )));
         lines.push(Line::from("   👥 Key Contributors:"));
 
         for contributor in &library.contributors {
@@ -188,9 +209,10 @@ fn generate_credits_content(state: &mut CreditsWidgetState) -> Paragraph {
     }
 
     // Special Thanks
-    lines.push(Line::from(vec![
-        Span::styled("🙏 Special Thanks", Style::default().add_modifier(Modifier::BOLD)),
-    ]));
+    lines.push(Line::from(vec![Span::styled(
+        "🙏 Special Thanks",
+        Style::default().add_modifier(Modifier::BOLD),
+    )]));
     lines.push(Line::from("─────────────────"));
     lines.push(Line::from("  • The Rust Programming Language team"));
     lines.push(Line::from("  • All open source contributors"));
@@ -199,18 +221,25 @@ fn generate_credits_content(state: &mut CreditsWidgetState) -> Paragraph {
     lines.push(Line::from(""));
 
     // Call to Action
-    lines.push(Line::from(vec![
-        Span::styled("💡 Want to contribute?", Style::default().add_modifier(Modifier::BOLD)),
-    ]));
-    lines.push(Line::from("Visit: https://github.com/edgarhsanchez/ai_code_buddy"));
-    lines.push(Line::from("🐛 Found a bug? Report it: https://github.com/edgarhsanchez/ai_code_buddy/issues"));
+    lines.push(Line::from(vec![Span::styled(
+        "💡 Want to contribute?",
+        Style::default().add_modifier(Modifier::BOLD),
+    )]));
+    lines.push(Line::from(
+        "Visit: https://github.com/edgarhsanchez/ai_code_buddy",
+    ));
+    lines.push(Line::from(
+        "🐛 Found a bug? Report it: https://github.com/edgarhsanchez/ai_code_buddy/issues",
+    ));
 
     // Update total lines count
     state.total_lines = lines.len();
 
     // Create scrollable paragraph
     let scroll = (state.scroll_offset as u16, 0);
-    Paragraph::new(lines)
-        .scroll(scroll)
-        .block(Block::default().borders(Borders::ALL).title("Credits (Scrollable)"))
+    Paragraph::new(lines).scroll(scroll).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Credits (Scrollable)"),
+    )
 }

@@ -34,7 +34,10 @@ use std::{error::Error, io::stdout, time::Duration};
 use bevy_states::app::AppState;
 use clap::Parser;
 use events::app::AppEvent;
-use widgets::{analysis::AnalysisPlugin, credits::CreditsPlugin, overview::OverviewPlugin, reports::ReportsPlugin};
+use widgets::{
+    analysis::AnalysisPlugin, credits::CreditsPlugin, overview::OverviewPlugin,
+    reports::ReportsPlugin,
+};
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*, state::app::StatesPlugin};
 use bevy_ratatui::{

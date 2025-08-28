@@ -154,9 +154,7 @@ mod main_functions {
                     reports_events.send(crate::events::reports::ReportsEvent::MouseEvent(*event));
                 }
                 AppState::Credits => {
-                    credits_events.send(crate::events::credits::CreditsEvent::MouseEvent(
-                        *event,
-                    ));
+                    credits_events.send(crate::events::credits::CreditsEvent::MouseEvent(*event));
                 }
             }
         }

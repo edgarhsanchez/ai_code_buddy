@@ -32,11 +32,15 @@ else
   exit 1
 fi
 
+# Update Cargo.lock to reflect the new version
+echo "Updating Cargo.lock..."
+cargo update --workspace
+
 # Create and switch to new branch
 git checkout -b "$BRANCH_NAME"
 
-# Add, commit, and push
-git add Cargo.toml
+# Add both Cargo.toml and Cargo.lock
+git add Cargo.toml Cargo.lock
 git commit -m "chore: bump version to $NEW_VERSION"
 git push origin "$BRANCH_NAME"
 
@@ -45,4 +49,4 @@ git tag "v$NEW_VERSION"
 git push origin "v$NEW_VERSION"
 
 echo "Version bumped to $NEW_VERSION, pushed to branch $BRANCH_NAME, and tagged as v$NEW_VERSION."
-echo "Create a pull request from $BRANCH_NAME to main
+echo "Create a pull request from $BRANCH_NAME to main on GitHub."

@@ -54,6 +54,7 @@ fn test_perform_analysis_basic() -> Result<()> {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
+        disable_ai: false,
         cli_mode: true,
         show_credits: false,
     };
@@ -76,6 +77,7 @@ fn test_perform_analysis_invalid_repository() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
+        disable_ai: false,
         cli_mode: true,
         show_credits: false,
     };
@@ -125,6 +127,7 @@ fn test_analysis_gpu_settings() -> Result<()> {
         include_patterns: vec![],
         use_gpu: true,
         force_cpu: false,
+        disable_ai: false,
         cli_mode: true,
         show_credits: false,
     };
@@ -143,6 +146,7 @@ fn test_analysis_gpu_settings() -> Result<()> {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
+        disable_ai: false,
         cli_mode: true,
         show_credits: false,
     };

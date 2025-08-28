@@ -333,6 +333,7 @@ fn test_analysis_event_handler_escape_key() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+            disable_ai: false,
         })
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 
@@ -403,6 +404,7 @@ fn test_analysis_event_handler_enter_key_start_analysis() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+            disable_ai: false,
         })
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 
@@ -461,6 +463,7 @@ fn test_analysis_event_handler_navigation_keys() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+            disable_ai: false,
         })
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 
@@ -547,6 +550,7 @@ fn test_analysis_event_handler_reports_key() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+            disable_ai: false,
         })
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 

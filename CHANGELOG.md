@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **AI-Powered Analysis Toggle**: New `--disable-ai` flag for controlling AI-enhanced analysis
+- **Enhanced Analysis Engine**: AI-enhanced analysis with contextual understanding and deeper pattern detection
+- **Architecture Analysis**: Detection of God classes, complex methods, and structural anti-patterns
+- **Concurrency Analysis**: Race condition detection in multi-threaded code
+- **Error Handling Assessment**: Consistency analysis of error handling patterns across the codebase
+- **Performance Optimization**: Context-aware performance suggestions beyond basic pattern matching
+- **Complexity Scoring**: Maintainability metrics with refactoring recommendations
+
+### Enhanced
+- **Analysis Pipeline**: Conditional analysis with AI-enhanced mode (default) vs rule-based mode
+- **User Experience**: Clear visual indicators showing which analysis mode is active
+- **Documentation**: Comprehensive README updates with AI analysis usage examples and performance comparisons
+
+### Changed
+- **Default Behavior**: AI analysis is now enabled by default for maximum code insights
+- **CLI Interface**: Updated flag from `--enable-ai` to `--disable-ai` for better UX (opt-out vs opt-in)
+
 ## [0.3.0] - 2025-08-26
 
 ### Major Rewrite - Bevy Integration & Enhanced Analysis

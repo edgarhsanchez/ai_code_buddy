@@ -31,6 +31,7 @@ fn test_initialize_app_function() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: true,
+            disable_ai: false,
         })
         .init_state::<AppState>()
         .add_systems(Update, initialize_app);
@@ -128,6 +129,7 @@ fn test_main_app_configuration() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
+        disable_ai: false,
     };
 
     // Test CLI mode detection
@@ -172,6 +174,7 @@ fn test_resource_setup() {
         include_patterns: vec!["*.rs".to_string()],
         use_gpu: true,
         force_cpu: false,
+        disable_ai: false,
     };
 
     let mut app = App::new();
@@ -249,6 +252,7 @@ fn test_output_format_variants() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+            disable_ai: false,
         };
 
         assert_eq!(args.output_format, format);
@@ -271,6 +275,7 @@ fn test_initialize_with_different_configs() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: true,
+            disable_ai: false,
         },
         Args {
             repo_path: "/custom/path".to_string(),
@@ -284,6 +289,7 @@ fn test_initialize_with_different_configs() {
             include_patterns: vec!["src/**".to_string()],
             use_gpu: true,
             force_cpu: false,
+            disable_ai: false,
         },
     ];
 

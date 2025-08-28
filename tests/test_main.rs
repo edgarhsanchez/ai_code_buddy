@@ -75,6 +75,7 @@ fn test_cli_mode_detection() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: false,
+        disable_ai: false,
     };
 
     // CLI mode is determined by args.cli_mode
@@ -118,6 +119,7 @@ fn test_main_args_parsing() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: true,
+            disable_ai: false,
         },
         Args {
             repo_path: ".".to_string(),
@@ -131,6 +133,7 @@ fn test_main_args_parsing() {
             include_patterns: vec![],
             use_gpu: true,
             force_cpu: false,
+            disable_ai: false,
         },
     ];
 
@@ -183,6 +186,7 @@ fn test_app_initialization_state() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: false,
+        disable_ai: false,
     };
 
     assert!(!args.repo_path.is_empty());

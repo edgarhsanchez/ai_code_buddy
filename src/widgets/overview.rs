@@ -13,6 +13,7 @@ use crate::{
     args::Args,
     bevy_states::app::AppState,
     events::{app::AppEvent, overview::OverviewEvent},
+    version::APP_VERSION,
     theme::THEME,
     widget_states::overview::{OverviewComponent, OverviewWidgetState, SelectionDirection},
 };
@@ -205,7 +206,7 @@ impl StatefulWidgetRef for OverviewWidget {
 
 impl OverviewWidget {
     fn render_title(&self, area: Rect, buf: &mut Buffer) {
-        let title = Paragraph::new("🤖 AI Code Buddy v0.2.0")
+        let title = Paragraph::new(format!("🤖 AI Code Buddy v{}", APP_VERSION))
             .style(THEME.title_style())
             .alignment(Alignment::Center)
             .block(

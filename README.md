@@ -48,7 +48,7 @@ ai-code-buddy --cli --format summary
 
 **Example Output:**
 ```
-🔍 AI Code Review Tool v0.2.0
+🔍 AI Code Review Tool
 📂 Repository: .
 🌿 Comparing: main → HEAD
 
@@ -94,7 +94,7 @@ cargo install ai-code-buddy
 
 The build system automatically detects your hardware and enables the best acceleration:
 - 🍎 **Apple Silicon (M1/M2/M3)**: Metal GPU acceleration
-- 🟢 **NVIDIA GPU**: CUDA acceleration (if drivers available)
+- 🟢 **NVIDIA GPU**: CUDA acceleration (Windows-only; if drivers available)
 - 🔵 **Intel processors**: MKL (Math Kernel Library) acceleration
 - 💻 **Fallback**: Optimized CPU execution
 
@@ -154,7 +154,7 @@ sudo ln -s $(pwd)/target/release/ai-code-buddy /usr/local/bin/
 ```bash
 # Force specific GPU backend
 cargo install ai-code-buddy --features gpu-metal    # Apple Silicon
-cargo install ai-code-buddy --features gpu-cuda     # NVIDIA CUDA  
+cargo install ai-code-buddy --features gpu-cuda     # NVIDIA CUDA (Windows only)  
 cargo install ai-code-buddy --features gpu-mkl      # Intel MKL
 
 # CPU-only build (smaller binary)
@@ -233,7 +233,7 @@ ai-code-buddy --gpu --cli --verbose
 # If Metal not available on Apple Silicon:
 cargo install ai-code-buddy --features gpu-metal --force
 
-# If CUDA not available with NVIDIA:
+# If CUDA not available with NVIDIA (Windows only):
 cargo install ai-code-buddy --features gpu-cuda --force
 ```
 
@@ -668,7 +668,7 @@ ai-code-buddy --cli --format summary
 
 **Actual Output:**
 ```
-🔍 AI Code Review Tool v0.2.0 (CLI Mode)
+🔍 AI Code Review Tool (CLI Mode)
 📂 Repository: .
 🌿 Comparing: main → HEAD
 📊 Starting AI-powered analysis...
@@ -1617,7 +1617,7 @@ source ~/.cargo/env
 ```bash
 # Force GPU features
 cargo install ai-code-buddy --features gpu-metal  # Apple Silicon
-cargo install ai-code-buddy --features gpu-cuda   # NVIDIA
+cargo install ai-code-buddy --features gpu-cuda   # NVIDIA (Windows only)
 ```
 
 **❓ Q: Can I run this in Docker?**

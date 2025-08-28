@@ -278,7 +278,7 @@ fn test_cleanup_logic() {
 #[test]
 fn test_version_display() {
     // Test version information
-    let version = "0.2.0"; // Should match the version in main.rs
+    let version = env!("CARGO_PKG_VERSION");
     assert!(!version.is_empty());
     assert!(version.contains("."));
 }

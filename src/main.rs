@@ -24,6 +24,7 @@ mod bevy_states {
 mod args;
 mod core;
 mod theme;
+mod version;
 
 use std::{error::Error, io::stdout, time::Duration};
 
@@ -93,7 +94,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn initialize_app(mut next_state: ResMut<NextState<AppState>>, args: Res<args::Args>) {
-    println!("🚀 AI Code Buddy v0.2.0 - Initializing...");
+    println!(
+        "🚀 AI Code Buddy v{} - Initializing...",
+        crate::version::APP_VERSION
+    );
     println!("📂 Repository: {}", args.repo_path);
     println!(
         "🌿 Branches: {} → {}",

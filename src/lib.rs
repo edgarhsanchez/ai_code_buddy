@@ -1,6 +1,10 @@
 pub mod args;
 pub mod core;
 pub mod theme;
+pub mod version;
+
+// Re-export version constants for convenience
+pub use version::{APP_NAME, APP_VERSION};
 
 // Platform guards for GPU features to keep CI/platform builds sane
 // NVIDIA CUDA must only be built on Windows runners
@@ -50,7 +54,10 @@ mod main_functions {
     use bevy_ratatui::event::{KeyEvent, MouseEvent};
 
     pub fn initialize_app(mut next_state: ResMut<NextState<AppState>>, args: Res<Args>) {
-        println!("🚀 AI Code Buddy v0.2.0 - Initializing...");
+        println!(
+            "🚀 AI Code Buddy v{} - Initializing...",
+            crate::APP_VERSION
+        );
         println!("📂 Repository: {}", args.repo_path);
         println!(
             "🌿 Branches: {} → {}",

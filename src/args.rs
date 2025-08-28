@@ -15,7 +15,7 @@ fn is_gpu_available() -> bool {
 #[derive(Parser, Clone, Debug, Resource)]
 #[command(
     name = "ai-code-buddy",
-    version = "0.2.0",
+    version,
     about = "🤖 AI-powered code review tool with elegant TUI",
     long_about = "AI Code Buddy is an intelligent code analysis tool that compares branches, \
                   detects security vulnerabilities, performance issues, and code quality problems. \

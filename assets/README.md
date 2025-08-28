@@ -14,8 +14,16 @@ This directory contains visual assets for the AI Code Buddy project.
   - Key feature highlights
   - OWASP branding
 
-### `social-preview.svg` (1280x640) 
-- **Purpose**: Simplified social media preview card
+### `cowboy_image.jpg` (Primary Banner)
+- **Purpose**: Main project banner image
+- **Usage**: Displayed at the top of README.md
+- **Features**:
+  - Cowboy-themed branding
+  - High-quality visual representation
+  - Project identity
+
+### `social-preview.svg` (1280x640)
+- **Purpose**: Social media preview card (backup/alternative)
 - **Features**:
   - Clean, readable design
   - Essential feature highlights

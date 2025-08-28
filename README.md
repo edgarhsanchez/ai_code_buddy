@@ -1,6 +1,6 @@
 # AI Code Buddy
 
-![AI Code Buddy](./assets/social-preview.svg)
+![AI Code Buddy](./assets/cowboy_image.jpg)
 
 [![Crates.io](https://img.shields.io/crates/v/ai-code-buddy.svg)](https://crates.io/crates/ai-code-buddy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

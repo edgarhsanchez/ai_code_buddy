@@ -54,10 +54,7 @@ mod main_functions {
     use bevy_ratatui::event::{KeyEvent, MouseEvent};
 
     pub fn initialize_app(mut next_state: ResMut<NextState<AppState>>, args: Res<Args>) {
-        println!(
-            "🚀 AI Code Buddy v{} - Initializing...",
-            crate::APP_VERSION
-        );
+        println!("🚀 AI Code Buddy v{} - Initializing...", crate::APP_VERSION);
         println!("📂 Repository: {}", args.repo_path);
         println!(
             "🌿 Branches: {} → {}",

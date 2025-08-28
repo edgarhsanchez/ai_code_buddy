@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 /// Information about a library dependency
 #[derive(Debug, Clone)]
 pub struct LibraryInfo {
@@ -23,7 +25,7 @@ pub fn get_project_contributors() -> Vec<Contributor> {
         Contributor {
             name: "Edgar Sanchez",
             email: "esanchez@m2iab.com",
-            contributions: 76,
+            contributions: 79,
         }
 ,
         Contributor {
@@ -146,6 +148,15 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
         }
 ,
         LibraryInfo {
+            name: "num_cpus",
+            version: "1.16",
+            license: "Unknown",
+            description: "Rust library dependency",
+            repository: "https://crates.io/crates/num_cpus",
+            contributors: vec!["Various contributors"],
+        }
+,
+        LibraryInfo {
             name: "pretty_assertions",
             version: "1.4.1",
             license: "Unknown",
@@ -197,6 +208,15 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "A Rust library to build rich terminal user interfaces",
             repository: "https://github.com/ratatui/ratatui",
             contributors: vec!["Florian Dehau", "Joshka", "And 100+ contributors"],
+        }
+,
+        LibraryInfo {
+            name: "rayon",
+            version: "1.8",
+            license: "Unknown",
+            description: "Rust library dependency",
+            repository: "https://crates.io/crates/rayon",
+            contributors: vec!["Various contributors"],
         }
 ,
         LibraryInfo {

@@ -1,5 +1,5 @@
-use ai_code_buddy::{Args, OutputFormat};
 use ai_code_buddy::core;
+use ai_code_buddy::{Args, OutputFormat};
 
 #[cfg(test)]
 mod tests {
@@ -25,7 +25,7 @@ mod tests {
     fn test_run_cli_mode_with_credits() {
         let mut args = create_test_args();
         args.show_credits = true;
-        
+
         // Should not fail when showing credits
         let result = core::run_cli_mode(args);
         assert!(result.is_ok());
@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn test_run_cli_mode_different_output_formats() {
-        let formats = vec![
+        let formats = [
             OutputFormat::Summary,
             OutputFormat::Detailed,
             OutputFormat::Json,
@@ -43,7 +43,7 @@ mod tests {
         for format in formats {
             let mut args = create_test_args();
             args.output_format = format;
-            
+
             // Should handle different output formats
             // Note: This might fail due to git repo requirements, but we're testing the function exists
             let _result = core::run_cli_mode(args);
@@ -81,18 +81,18 @@ mod tests {
         let markdown = OutputFormat::Markdown;
 
         // Basic checks that they're different
-        assert_ne!(format!("{:?}", summary), format!("{:?}", detailed));
-        assert_ne!(format!("{:?}", json), format!("{:?}", markdown));
+        assert_ne!(format!("{summary:?}"), format!("{:?}", detailed));
+        assert_ne!(format!("{json:?}"), format!("{:?}", markdown));
     }
 
     #[test]
     fn test_args_repo_path_manipulation() {
         let mut args = create_test_args();
-        
+
         // Test path manipulation
         args.repo_path = "/tmp/test-repo".to_string();
         assert_eq!(args.repo_path, "/tmp/test-repo");
-        
+
         // Test relative path
         args.repo_path = "./src".to_string();
         assert!(args.repo_path.starts_with("."));
@@ -101,11 +101,11 @@ mod tests {
     #[test]
     fn test_args_branch_names() {
         let mut args = create_test_args();
-        
+
         // Test different branch naming patterns
         args.source_branch = "feature/new-feature".to_string();
         args.target_branch = "release/v1.0".to_string();
-        
+
         assert!(args.source_branch.contains("/"));
         assert!(args.target_branch.starts_with("release"));
     }
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn test_args_verbose_flag() {
         let mut args = create_test_args();
-        
+
         // Test verbose flag toggling
         assert!(!args.verbose); // Default false
         args.verbose = true;
@@ -123,18 +123,18 @@ mod tests {
     #[test]
     fn test_pattern_collections() {
         let mut args = create_test_args();
-        
+
         // Test adding patterns
         args.include_patterns.push("**/*.rs".to_string());
         args.exclude_patterns.push("**/target/**".to_string());
-        
+
         assert!(!args.include_patterns.is_empty());
         assert!(!args.exclude_patterns.is_empty());
-        
+
         // Test clearing patterns
         args.include_patterns.clear();
         args.exclude_patterns.clear();
-        
+
         assert!(args.include_patterns.is_empty());
         assert!(args.exclude_patterns.is_empty());
     }

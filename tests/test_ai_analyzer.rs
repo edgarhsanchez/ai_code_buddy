@@ -17,7 +17,7 @@ fn test_gpu_backend_equality() {
     assert_eq!(GpuBackend::Cuda, GpuBackend::Cuda);
     assert_eq!(GpuBackend::Mkl, GpuBackend::Mkl);
     assert_eq!(GpuBackend::Cpu, GpuBackend::Cpu);
-    
+
     assert_ne!(GpuBackend::Metal, GpuBackend::Cuda);
     assert_ne!(GpuBackend::Cpu, GpuBackend::Metal);
 }
@@ -30,7 +30,7 @@ fn test_analysis_request_creation() {
         language: "rust".to_string(),
         commit_status: CommitStatus::Modified,
     };
-    
+
     assert_eq!(request.file_path, "test.rs");
     assert_eq!(request.content, "fn main() {}");
     assert_eq!(request.language, "rust");
@@ -44,7 +44,7 @@ fn test_progress_update_creation() {
         progress: 0.5,
         stage: "analyzing".to_string(),
     };
-    
+
     assert_eq!(update.current_file, "src/main.rs");
     assert_eq!(update.progress, 0.5);
     assert_eq!(update.stage, "analyzing");
@@ -53,7 +53,7 @@ fn test_progress_update_creation() {
 #[test]
 fn test_gpu_backend_debug_format() {
     let backend = GpuBackend::Metal;
-    let debug_str = format!("{:?}", backend);
+    let debug_str = format!("{backend:?}");
     assert!(debug_str.contains("Metal"));
 }
 
@@ -65,31 +65,31 @@ fn test_analysis_request_serialization() -> Result<()> {
         language: "rust".to_string(),
         commit_status: CommitStatus::Modified,
     };
-    
+
     // Test serialization
     let json = serde_json::to_string(&request)?;
     assert!(json.contains("test.rs"));
     assert!(json.contains("rust"));
-    
+
     // Test deserialization
     let deserialized: AnalysisRequest = serde_json::from_str(&json)?;
     assert_eq!(deserialized.file_path, request.file_path);
     assert_eq!(deserialized.content, request.content);
     assert_eq!(deserialized.language, request.language);
     assert!(matches!(deserialized.commit_status, CommitStatus::Modified));
-    
+
     Ok(())
 }
 
 #[test]
 fn test_analysis_request_with_different_statuses() {
-    let statuses = vec![
+    let statuses = [
         CommitStatus::Committed,
         CommitStatus::Staged,
         CommitStatus::Modified,
         CommitStatus::Untracked,
     ];
-    
+
     for status in statuses {
         let request = AnalysisRequest {
             file_path: "test.rs".to_string(),
@@ -97,29 +97,29 @@ fn test_analysis_request_with_different_statuses() {
             language: "rust".to_string(),
             commit_status: status.clone(),
         };
-        
+
         // Use pattern matching instead of equality
-        match (&request.commit_status, &status) {
-            (CommitStatus::Committed, CommitStatus::Committed) => assert!(true),
-            (CommitStatus::Staged, CommitStatus::Staged) => assert!(true),
-            (CommitStatus::Modified, CommitStatus::Modified) => assert!(true),
-            (CommitStatus::Untracked, CommitStatus::Untracked) => assert!(true),
-            _ => assert!(false, "Status mismatch"),
-        }
+        assert!(matches!(
+            (&request.commit_status, &status),
+            (CommitStatus::Committed, CommitStatus::Committed)
+                | (CommitStatus::Staged, CommitStatus::Staged)
+                | (CommitStatus::Modified, CommitStatus::Modified)
+                | (CommitStatus::Untracked, CommitStatus::Untracked)
+        ));
     }
 }
 
 #[test]
 fn test_progress_update_with_different_values() {
-    let progress_values = vec![0.0, 0.25, 0.5, 0.75, 1.0];
-    
+    let progress_values = [0.0, 0.25, 0.5, 0.75, 1.0];
+
     for progress in progress_values {
         let update = ProgressUpdate {
-            current_file: format!("file_{}.rs", (progress * 100.0) as i32),
+            current_file: format!("file_{}{}.rs", "", (progress * 100.0) as i32),
             progress,
             stage: "analyzing".to_string(),
         };
-        
+
         assert_eq!(update.progress, progress);
         assert!(update.current_file.contains("file_"));
     }
@@ -133,38 +133,39 @@ fn test_analysis_request_with_empty_content() {
         language: "rust".to_string(),
         commit_status: CommitStatus::Untracked,
     };
-    
+
     assert!(request.content.is_empty());
     assert_eq!(request.file_path, "empty.rs");
 }
 
 #[test]
 fn test_analysis_request_with_large_content() {
-    let large_content = "fn main() {\n".to_string() + &"    println!(\"Hello\");\n".repeat(1000) + "}";
-    
+    let large_content =
+        "fn main() {\n".to_string() + &"    println!(\"Hello\");\n".repeat(1000) + "}";
+
     let request = AnalysisRequest {
         file_path: "large.rs".to_string(),
         content: large_content.clone(),
         language: "rust".to_string(),
         commit_status: CommitStatus::Modified,
     };
-    
+
     assert_eq!(request.content, large_content);
     assert!(request.content.len() > 1000);
 }
 
 #[test]
 fn test_analysis_request_different_languages() {
-    let languages = vec!["rust", "python", "javascript", "typescript", "go", "java"];
-    
+    let languages = ["rust", "python", "javascript", "typescript", "go", "java"];
+
     for language in languages {
         let request = AnalysisRequest {
-            file_path: format!("test.{}", language),
+            file_path: format!("test.{language}"),
             content: "// test content".to_string(),
             language: language.to_string(),
             commit_status: CommitStatus::Untracked,
         };
-        
+
         assert_eq!(request.language, language);
         assert!(request.file_path.contains(language));
     }
@@ -172,15 +173,21 @@ fn test_analysis_request_different_languages() {
 
 #[test]
 fn test_progress_update_stages() {
-    let stages = vec!["initializing", "analyzing", "processing", "finalizing", "complete"];
-    
+    let stages = [
+        "initializing",
+        "analyzing",
+        "processing",
+        "finalizing",
+        "complete",
+    ];
+
     for stage in stages {
         let update = ProgressUpdate {
             current_file: "test.rs".to_string(),
             progress: 0.5,
             stage: stage.to_string(),
         };
-        
+
         assert_eq!(update.stage, stage);
     }
 }
@@ -200,17 +207,17 @@ fn test_analysis_request_clone() {
         language: "rust".to_string(),
         commit_status: CommitStatus::Modified,
     };
-    
+
     let cloned = request.clone();
     assert_eq!(request.file_path, cloned.file_path);
     assert_eq!(request.content, cloned.content);
     assert_eq!(request.language, cloned.language);
-    
+
     // Use pattern matching for comparison
-    match (&request.commit_status, &cloned.commit_status) {
-        (CommitStatus::Modified, CommitStatus::Modified) => assert!(true),
-        _ => assert!(false, "Status mismatch"),
-    }
+    assert!(matches!(
+        (&request.commit_status, &cloned.commit_status),
+        (CommitStatus::Modified, CommitStatus::Modified)
+    ));
 }
 
 #[test]
@@ -220,7 +227,7 @@ fn test_progress_update_clone() {
         progress: 0.75,
         stage: "analyzing".to_string(),
     };
-    
+
     let cloned = update.clone();
     assert_eq!(update.current_file, cloned.current_file);
     assert_eq!(update.progress, cloned.progress);

@@ -226,7 +226,10 @@ mod tests {
         // Exclude target and logs by default
         let args2 = mk_args(vec![], vec![]);
         assert!(!should_analyze_file("target/debug/build.rs", &args2));
-        assert!(!should_analyze_file("foo/node_modules/pkg/index.js", &args2));
+        assert!(!should_analyze_file(
+            "foo/node_modules/pkg/index.js",
+            &args2
+        ));
         assert!(!should_analyze_file("foo/app.log", &args2));
         assert!(should_analyze_file("src/main.rs", &args2));
 

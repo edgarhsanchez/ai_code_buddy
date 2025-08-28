@@ -45,11 +45,7 @@ pub use core::analysis::perform_analysis;
 pub use main_functions::*;
 
 mod main_functions {
-    use crate::{
-        args::Args,
-        bevy_states::app::AppState,
-        events::app::AppEvent,
-    };
+    use crate::{args::Args, bevy_states::app::AppState, events::app::AppEvent};
     use bevy::prelude::*;
     use bevy_ratatui::event::{KeyEvent, MouseEvent};
 
@@ -103,13 +99,19 @@ mod main_functions {
 
             match app_state {
                 AppState::Overview => {
-                    overview_events.send(crate::events::overview::OverviewEvent::KeyEvent(event.clone()));
+                    overview_events.send(crate::events::overview::OverviewEvent::KeyEvent(
+                        event.clone(),
+                    ));
                 }
                 AppState::Analysis => {
-                    analysis_events.send(crate::events::analysis::AnalysisEvent::KeyEvent(event.clone()));
+                    analysis_events.send(crate::events::analysis::AnalysisEvent::KeyEvent(
+                        event.clone(),
+                    ));
                 }
                 AppState::Reports => {
-                    reports_events.send(crate::events::reports::ReportsEvent::KeyEvent(event.clone()));
+                    reports_events.send(crate::events::reports::ReportsEvent::KeyEvent(
+                        event.clone(),
+                    ));
                 }
             }
         }
@@ -127,10 +129,12 @@ mod main_functions {
         for event in mouse_events.read() {
             match app_state {
                 AppState::Overview => {
-                    overview_events.send(crate::events::overview::OverviewEvent::MouseEvent(*event));
+                    overview_events
+                        .send(crate::events::overview::OverviewEvent::MouseEvent(*event));
                 }
                 AppState::Analysis => {
-                    analysis_events.send(crate::events::analysis::AnalysisEvent::MouseEvent(*event));
+                    analysis_events
+                        .send(crate::events::analysis::AnalysisEvent::MouseEvent(*event));
                 }
                 AppState::Reports => {
                     reports_events.send(crate::events::reports::ReportsEvent::MouseEvent(*event));

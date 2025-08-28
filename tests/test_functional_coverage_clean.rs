@@ -1,47 +1,47 @@
 // Comprehensive functional tests to achieve high code coverage
 // This focuses on actual method calls rather than just data structure testing
 
+use ai_code_buddy::args::{Args, OutputFormat};
 use ai_code_buddy::core::ai_analyzer::{AnalysisRequest, GpuBackend, ProgressUpdate};
 use ai_code_buddy::core::git::GitAnalyzer;
 use ai_code_buddy::core::review::{CommitStatus, Issue, Review};
-use ai_code_buddy::args::{Args, OutputFormat};
-use tempfile::{tempdir, TempDir};
 use std::fs;
+use tempfile::{tempdir, TempDir};
 
 fn create_test_git_repo() -> Result<TempDir, Box<dyn std::error::Error>> {
     let dir = tempdir()?;
     let repo_path = dir.path();
-    
+
     // Initialize git repository
     std::process::Command::new("git")
         .arg("init")
         .current_dir(repo_path)
         .output()?;
-    
+
     // Create a test file
     fs::write(repo_path.join("test.rs"), "fn main() {}")?;
-    
+
     // Add and commit the file
     std::process::Command::new("git")
-        .args(&["add", "."])
+        .args(["add", "."])
         .current_dir(repo_path)
         .output()?;
-    
+
     std::process::Command::new("git")
-        .args(&["config", "user.email", "test@example.com"])
+        .args(["config", "user.email", "test@example.com"])
         .current_dir(repo_path)
         .output()?;
-    
+
     std::process::Command::new("git")
-        .args(&["config", "user.name", "Test User"])
+        .args(["config", "user.name", "Test User"])
         .current_dir(repo_path)
         .output()?;
-    
+
     std::process::Command::new("git")
-        .args(&["commit", "-m", "Initial commit"])
+        .args(["commit", "-m", "Initial commit"])
         .current_dir(repo_path)
         .output()?;
-    
+
     Ok(dir)
 }
 
@@ -49,7 +49,7 @@ fn create_test_git_repo() -> Result<TempDir, Box<dyn std::error::Error>> {
 fn test_git_analyzer_creation() {
     let temp_dir = create_test_git_repo().unwrap();
     let repo_path = temp_dir.path().to_str().unwrap();
-    
+
     let analyzer = GitAnalyzer::new(repo_path);
     assert!(analyzer.is_ok());
 }
@@ -58,17 +58,17 @@ fn test_git_analyzer_creation() {
 fn test_git_analyzer_get_changed_files() {
     let temp_dir = create_test_git_repo().unwrap();
     let repo_path = temp_dir.path().to_str().unwrap();
-    
+
     let analyzer = GitAnalyzer::new(repo_path).unwrap();
-    
+
     // Test with same branch (should return empty)
     let result = analyzer.get_changed_files("HEAD", "HEAD");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().len(), 0);
-    
+
     // Create a new file for testing differences
     fs::write(temp_dir.path().join("new_file.rs"), "fn new_function() {}").unwrap();
-    
+
     let result = analyzer.get_changed_files("HEAD", "HEAD");
     assert!(result.is_ok());
 }
@@ -77,14 +77,14 @@ fn test_git_analyzer_get_changed_files() {
 fn test_git_analyzer_get_file_content() {
     let temp_dir = create_test_git_repo().unwrap();
     let repo_path = temp_dir.path().to_str().unwrap();
-    
+
     let analyzer = GitAnalyzer::new(repo_path).unwrap();
-    
+
     // Test getting content of existing file
     let result = analyzer.get_file_content("test.rs", "HEAD");
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "fn main() {}");
-    
+
     // Test getting content of non-existent file
     let result = analyzer.get_file_content("nonexistent.rs", "HEAD");
     assert!(result.is_err());
@@ -94,9 +94,9 @@ fn test_git_analyzer_get_file_content() {
 fn test_git_analyzer_get_uncommitted_files() {
     let temp_dir = create_test_git_repo().unwrap();
     let repo_path = temp_dir.path().to_str().unwrap();
-    
+
     let analyzer = GitAnalyzer::new(repo_path).unwrap();
-    
+
     let result = analyzer.get_uncommitted_files();
     assert!(result.is_ok());
 }
@@ -105,9 +105,9 @@ fn test_git_analyzer_get_uncommitted_files() {
 fn test_git_analyzer_get_file_status() {
     let temp_dir = create_test_git_repo().unwrap();
     let repo_path = temp_dir.path().to_str().unwrap();
-    
+
     let analyzer = GitAnalyzer::new(repo_path).unwrap();
-    
+
     let result = analyzer.get_file_status("test.rs");
     assert!(result.is_ok());
 }
@@ -123,7 +123,7 @@ fn test_review_structure() {
         low_issues: 4,
         issues: vec![],
     };
-    
+
     assert_eq!(review.files_count, 5);
     assert_eq!(review.issues_count, 10);
     assert_eq!(review.critical_issues, 1);
@@ -152,7 +152,7 @@ fn test_review_with_issues() {
             commit_status: CommitStatus::Staged,
         },
     ];
-    
+
     let review = Review {
         files_count: 2,
         issues_count: 2,
@@ -162,7 +162,7 @@ fn test_review_with_issues() {
         low_issues: 0,
         issues,
     };
-    
+
     assert_eq!(review.issues.len(), 2);
     assert_eq!(review.high_issues, 1);
     assert_eq!(review.medium_issues, 1);
@@ -184,24 +184,24 @@ fn test_args_structure() {
         use_gpu: true,
         force_cpu: false,
     };
-    
+
     // Verify all fields are accessible
     assert_eq!(args.source_branch, "develop");
     assert_eq!(args.target_branch, "main");
     assert_eq!(args.output_format, OutputFormat::Json);
-    assert_eq!(args.use_gpu, true);
-    assert_eq!(args.verbose, true);
+    assert!(args.use_gpu);
+    assert!(args.verbose);
 }
 
 #[test]
 fn test_commit_status_variants() {
-    let variants = vec![
+    let variants = [
         CommitStatus::Committed,
         CommitStatus::Staged,
         CommitStatus::Modified,
         CommitStatus::Untracked,
     ];
-    
+
     for status in variants {
         // Test that all variants can be created and used
         let issue = Issue {
@@ -212,7 +212,7 @@ fn test_commit_status_variants() {
             description: "Test description".to_string(),
             commit_status: status,
         };
-        
+
         // Just verify we can create the issue successfully
         assert_eq!(issue.line, 1);
     }
@@ -236,7 +236,7 @@ fn test_issue_field_access() {
         description: "Buffer overflow vulnerability".to_string(),
         commit_status: CommitStatus::Modified,
     };
-    
+
     // Test all field access
     assert_eq!(issue.file, "src/main.rs");
     assert_eq!(issue.line, 42);
@@ -252,7 +252,7 @@ fn test_progress_update_field_access() {
         progress: 75.5,
         stage: "Analyzing patterns".to_string(),
     };
-    
+
     // Test all field access
     assert_eq!(progress.current_file, "src/lib.rs");
     assert_eq!(progress.progress, 75.5);
@@ -267,7 +267,7 @@ fn test_analysis_request_field_access() {
         language: "rust".to_string(),
         commit_status: CommitStatus::Staged,
     };
-    
+
     // Test all field access
     assert_eq!(request.file_path, "src/utils.rs");
     assert_eq!(request.content, "pub fn utility_function() {}");
@@ -276,13 +276,13 @@ fn test_analysis_request_field_access() {
 
 #[test]
 fn test_output_format_variants() {
-    let formats = vec![
+    let formats = [
         OutputFormat::Summary,
         OutputFormat::Detailed,
         OutputFormat::Json,
         OutputFormat::Markdown,
     ];
-    
+
     for format in formats {
         let args = Args {
             repo_path: ".".to_string(),
@@ -297,14 +297,15 @@ fn test_output_format_variants() {
             use_gpu: false,
             force_cpu: false,
         };
-        
+
         // Verify the format was set correctly
-        match args.output_format {
-            OutputFormat::Summary => assert!(true),
-            OutputFormat::Detailed => assert!(true),
-            OutputFormat::Json => assert!(true),
-            OutputFormat::Markdown => assert!(true),
-        }
+        matches!(
+            args.output_format,
+            OutputFormat::Summary
+                | OutputFormat::Detailed
+                | OutputFormat::Json
+                | OutputFormat::Markdown
+        );
     }
 }
 
@@ -324,11 +325,11 @@ fn test_issue_serialization() {
         description: "Test issue description".to_string(),
         commit_status: CommitStatus::Modified,
     };
-    
+
     // Test that we can serialize and deserialize
     let serialized = serde_json::to_string(&issue).unwrap();
     let deserialized: Issue = serde_json::from_str(&serialized).unwrap();
-    
+
     assert_eq!(issue.file, deserialized.file);
     assert_eq!(issue.line, deserialized.line);
     assert_eq!(issue.severity, deserialized.severity);
@@ -345,11 +346,11 @@ fn test_review_serialization() {
         low_issues: 1,
         issues: vec![],
     };
-    
+
     // Test that we can serialize and deserialize
     let serialized = serde_json::to_string(&review).unwrap();
     let deserialized: Review = serde_json::from_str(&serialized).unwrap();
-    
+
     assert_eq!(review.files_count, deserialized.files_count);
     assert_eq!(review.issues_count, deserialized.issues_count);
     assert_eq!(review.critical_issues, deserialized.critical_issues);

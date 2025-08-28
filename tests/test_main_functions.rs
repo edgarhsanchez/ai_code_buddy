@@ -1,8 +1,11 @@
 use ai_code_buddy::{
-    app_events_handler, initialize_app, keyboard_events_handler, mouse_events_handler,
+    app_events_handler,
     args::{Args, OutputFormat},
     bevy_states::app::AppState,
-    events::{app::AppEvent, analysis::AnalysisEvent, overview::OverviewEvent, reports::ReportsEvent},
+    events::{
+        analysis::AnalysisEvent, app::AppEvent, overview::OverviewEvent, reports::ReportsEvent,
+    },
+    initialize_app, keyboard_events_handler, mouse_events_handler,
 };
 use bevy::prelude::*;
 use bevy::state::app::StatesPlugin;
@@ -11,9 +14,9 @@ use bevy_ratatui::event::{KeyEvent, MouseEvent};
 fn build_app_with_state() -> App {
     let mut app = App::new();
     app.add_plugins(StatesPlugin)
-    .add_event::<AppEvent>()
-    .add_event::<KeyEvent>()
-    .add_event::<MouseEvent>()
+        .add_event::<AppEvent>()
+        .add_event::<KeyEvent>()
+        .add_event::<MouseEvent>()
         .add_event::<OverviewEvent>()
         .add_event::<AnalysisEvent>()
         .add_event::<ReportsEvent>()

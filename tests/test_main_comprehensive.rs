@@ -2,10 +2,11 @@
 // Tests all main functions including app initialization, event handling, and system setup
 
 use ai_code_buddy::{
-    initialize_app, app_events_handler,
+    app_events_handler,
     args::{Args, OutputFormat},
     bevy_states::app::AppState,
     events::app::AppEvent,
+    initialize_app,
 };
 use bevy::{
     app::{App, AppExit, Update},
@@ -97,11 +98,7 @@ fn test_multiple_state_transitions() {
         .add_systems(Update, app_events_handler);
 
     // Test multiple state transitions
-    let states = vec![
-        AppState::Analysis,
-        AppState::Reports,
-        AppState::Overview,
-    ];
+    let states = [AppState::Analysis, AppState::Reports, AppState::Overview];
 
     for target_state in states {
         let mut events = app.world_mut().resource_mut::<Events<AppEvent>>();
@@ -135,7 +132,7 @@ fn test_main_app_configuration() {
 
     // Test CLI mode detection
     assert!(!args.cli_mode);
-    
+
     // Test frame rate calculation (60 FPS)
     let frame_rate = std::time::Duration::from_secs_f64(1.0 / 60.0);
     assert_eq!(frame_rate.as_millis(), 16); // ~16ms for 60 FPS
@@ -144,11 +141,7 @@ fn test_main_app_configuration() {
 // Test different app state variants
 #[test]
 fn test_app_state_variants() {
-    let states = vec![
-        AppState::Overview,
-        AppState::Analysis,
-        AppState::Reports,
-    ];
+    let states = vec![AppState::Overview, AppState::Analysis, AppState::Reports];
 
     for state in states {
         let mut app = App::new();
@@ -201,8 +194,7 @@ fn test_resource_setup() {
 #[test]
 fn test_state_initialization() {
     let mut app = App::new();
-    app.add_plugins(StatesPlugin)
-        .init_state::<AppState>();
+    app.add_plugins(StatesPlugin).init_state::<AppState>();
 
     let state = app.world().resource::<State<AppState>>();
     // Default state should be Overview
@@ -212,7 +204,7 @@ fn test_state_initialization() {
 // Test app event variants
 #[test]
 fn test_app_event_enum_variants() {
-    let events = vec![
+    let events = [
         AppEvent::SwitchTo(AppState::Overview),
         AppEvent::SwitchTo(AppState::Analysis),
         AppEvent::SwitchTo(AppState::Reports),
@@ -232,14 +224,13 @@ fn test_app_event_enum_variants() {
         app.update();
 
         // Events should be processed without panicking
-        assert!(true);
     }
 }
 
 // Test args output format variants
 #[test]
 fn test_output_format_variants() {
-    let formats = vec![
+    let formats = [
         OutputFormat::Summary,
         OutputFormat::Json,
         OutputFormat::Detailed,

@@ -457,7 +457,9 @@ mod tests {
 
     #[test]
     fn test_detect_language_variants() {
-        let analyzer = AIAnalyzer { backend: GpuBackend::Cpu };
+        let analyzer = AIAnalyzer {
+            backend: GpuBackend::Cpu,
+        };
         assert_eq!(analyzer.detect_language("src/main.rs"), "rust");
         assert_eq!(analyzer.detect_language("a/b/c.py"), "python");
         assert_eq!(analyzer.detect_language("index.ts"), "typescript");
@@ -467,7 +469,9 @@ mod tests {
 
     #[test]
     fn test_rule_based_analysis_rust_patterns() {
-        let analyzer = AIAnalyzer { backend: GpuBackend::Cpu };
+        let analyzer = AIAnalyzer {
+            backend: GpuBackend::Cpu,
+        };
         let content = r#"
             // SECURITY
             let password = "secret";
@@ -500,7 +504,9 @@ mod tests {
 
     #[test]
     fn test_rule_based_analysis_python_patterns() {
-        let analyzer = AIAnalyzer { backend: GpuBackend::Cpu };
+        let analyzer = AIAnalyzer {
+            backend: GpuBackend::Cpu,
+        };
         let content = r#"
             import pickle
             data = pickle.loads(b"...")
@@ -517,7 +523,9 @@ mod tests {
 
     #[test]
     fn test_rule_based_analysis_js_patterns() {
-        let analyzer = AIAnalyzer { backend: GpuBackend::Cpu };
+        let analyzer = AIAnalyzer {
+            backend: GpuBackend::Cpu,
+        };
         let content = r#"
             let x = "user";
             element.innerHTML = "<div>" + x;

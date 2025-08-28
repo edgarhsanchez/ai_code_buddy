@@ -17,24 +17,24 @@ fn legacy_analysis_simple_placeholder() {
 fn test_perform_analysis_basic() -> Result<()> {
     let temp_dir = tempfile::tempdir()?;
     let repo = Repository::init(&temp_dir)?;
-    
+
     // Set up git config
     let mut config = repo.config()?;
     config.set_str("user.name", "Test User")?;
     config.set_str("user.email", "test@example.com")?;
-    
+
     // Create and add a file, then commit to create a proper repository
     let file_path = temp_dir.path().join("test.rs");
     std::fs::write(&file_path, "fn main() {}")?;
-    
+
     let mut index = repo.index()?;
     index.add_path(std::path::Path::new("test.rs"))?;
     index.write()?;
-    
+
     let tree_id = index.write_tree()?;
     let tree = repo.find_tree(tree_id)?;
     let signature = git2::Signature::now("Test User", "test@example.com")?;
-    
+
     let _commit = repo.commit(
         Some("HEAD"),
         &signature,
@@ -43,7 +43,7 @@ fn test_perform_analysis_basic() -> Result<()> {
         &tree,
         &[],
     )?;
-    
+
     let args = Args {
         repo_path: temp_dir.path().to_string_lossy().to_string(),
         source_branch: "main".to_string(),
@@ -57,10 +57,10 @@ fn test_perform_analysis_basic() -> Result<()> {
         cli_mode: true,
         show_credits: false,
     };
-    
+
     let result = perform_analysis(&args);
     assert!(result.is_ok() || result.is_err()); // Accept either result
-    
+
     Ok(())
 }
 
@@ -79,7 +79,7 @@ fn test_perform_analysis_invalid_repository() {
         cli_mode: true,
         show_credits: false,
     };
-    
+
     let result = perform_analysis(&args);
     assert!(result.is_err());
 }
@@ -88,23 +88,23 @@ fn test_perform_analysis_invalid_repository() {
 fn test_analysis_gpu_settings() -> Result<()> {
     let temp_dir = tempfile::tempdir()?;
     let repo = Repository::init(&temp_dir)?;
-    
+
     // Set up git config
     let mut config = repo.config()?;
     config.set_str("user.name", "Test User")?;
     config.set_str("user.email", "test@example.com")?;
-    
+
     let file_path = temp_dir.path().join("test.rs");
     std::fs::write(&file_path, "fn main() {}")?;
-    
+
     let mut index = repo.index()?;
     index.add_path(std::path::Path::new("test.rs"))?;
     index.write()?;
-    
+
     let tree_id = index.write_tree()?;
     let tree = repo.find_tree(tree_id)?;
     let signature = git2::Signature::now("Test User", "test@example.com")?;
-    
+
     let _commit = repo.commit(
         Some("HEAD"),
         &signature,
@@ -113,7 +113,7 @@ fn test_analysis_gpu_settings() -> Result<()> {
         &tree,
         &[],
     )?;
-    
+
     // Test with GPU enabled
     let args_gpu = Args {
         repo_path: temp_dir.path().to_string_lossy().to_string(),
@@ -128,10 +128,10 @@ fn test_analysis_gpu_settings() -> Result<()> {
         cli_mode: true,
         show_credits: false,
     };
-    
+
     let result = perform_analysis(&args_gpu);
     assert!(result.is_ok() || result.is_err()); // Accept either result
-    
+
     // Test with CPU forced
     let args_cpu = Args {
         repo_path: temp_dir.path().to_string_lossy().to_string(),
@@ -146,9 +146,9 @@ fn test_analysis_gpu_settings() -> Result<()> {
         cli_mode: true,
         show_credits: false,
     };
-    
+
     let result = perform_analysis(&args_cpu);
     assert!(result.is_ok() || result.is_err()); // Accept either result
-    
+
     Ok(())
 }

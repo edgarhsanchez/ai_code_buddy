@@ -135,7 +135,7 @@ fn print_markdown(review: &review::Review) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::review::{Issue, Review, CommitStatus};
+    use crate::core::review::{CommitStatus, Issue, Review};
 
     fn sample_review() -> Review {
         Review {
@@ -145,7 +145,7 @@ mod tests {
             high_issues: 0,
             medium_issues: 0,
             low_issues: 0,
-            issues: vec![Issue{
+            issues: vec![Issue {
                 file: "src/lib.rs".into(),
                 line: 1,
                 severity: "Critical".into(),

@@ -1,7 +1,10 @@
 use ai_code_buddy::core::analysis::perform_analysis_with_progress;
 use ai_code_buddy::{Args, OutputFormat};
 use std::process::Command;
-use std::{fs, sync::{Arc, Mutex}};
+use std::{
+    fs,
+    sync::{Arc, Mutex},
+};
 use tempfile::TempDir;
 
 // Helper to run a git command in a repo dir
@@ -11,7 +14,7 @@ fn git(repo: &str, args: &[&str]) {
         .current_dir(repo)
         .status()
         .expect("failed to run git");
-    assert!(status.success(), "git {:?} failed", args);
+    assert!(status.success(), "git {args:?} failed");
 }
 
 fn setup_repo_with_branches() -> (TempDir, String) {
@@ -25,8 +28,16 @@ fn setup_repo_with_branches() -> (TempDir, String) {
     git(&repo, &["config", "user.email", "test@example.com"]);
 
     // initial files and commit on main (include a shared file we'll later modify)
-    fs::write(format!("{repo}/file.rs"), "fn main() { println!(\"hello\"); }\n").unwrap();
-    fs::write(format!("{repo}/shared.rs"), "pub fn shared() { println!(\"base\"); }\n").unwrap();
+    fs::write(
+        format!("{repo}/file.rs"),
+        "fn main() { println!(\"hello\"); }\n",
+    )
+    .unwrap();
+    fs::write(
+        format!("{repo}/shared.rs"),
+        "pub fn shared() { println!(\"base\"); }\n",
+    )
+    .unwrap();
     git(&repo, &["add", "."]);
     git(&repo, &["commit", "-m", "init"]);
 
@@ -40,7 +51,10 @@ fn setup_repo_with_branches() -> (TempDir, String) {
     )
     .unwrap();
     git(&repo, &["add", "file.rs"]);
-    git(&repo, &["commit", "-m", "change file to include security issue"]);
+    git(
+        &repo,
+        &["commit", "-m", "change file to include security issue"],
+    );
 
     // Create a staged file (in index only)
     fs::write(
@@ -91,9 +105,12 @@ fn test_perform_analysis_with_progress_covers_paths() {
 
     let rt = tokio::runtime::Runtime::new().unwrap();
     let review = rt
-        .block_on(perform_analysis_with_progress(&args, Some(Box::new(move |p, s| {
-            progress_clone.lock().unwrap().push((p, s));
-        }))))
+        .block_on(perform_analysis_with_progress(
+            &args,
+            Some(Box::new(move |p, s| {
+                progress_clone.lock().unwrap().push((p, s));
+            })),
+        ))
         .expect("analysis should succeed on prepared repo");
 
     // We should have analyzed our committed diff + staged + untracked files and found issues

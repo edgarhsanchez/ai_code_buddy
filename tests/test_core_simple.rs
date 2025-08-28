@@ -72,7 +72,7 @@ fn test_output_format_equality() {
     assert_eq!(OutputFormat::Detailed, OutputFormat::Detailed);
     assert_eq!(OutputFormat::Json, OutputFormat::Json);
     assert_eq!(OutputFormat::Markdown, OutputFormat::Markdown);
-    
+
     assert_ne!(OutputFormat::Summary, OutputFormat::Detailed);
     assert_ne!(OutputFormat::Json, OutputFormat::Markdown);
 }

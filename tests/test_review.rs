@@ -1,4 +1,4 @@
-use ai_code_buddy::core::review::{Review, Issue, CommitStatus};
+use ai_code_buddy::core::review::{CommitStatus, Issue, Review};
 
 #[test]
 fn test_review_new() {
@@ -11,7 +11,7 @@ fn test_review_new() {
         low_issues: 0,
         issues: vec![],
     };
-    
+
     assert_eq!(review.files_count, 5);
     assert_eq!(review.issues_count, 3);
     assert_eq!(review.critical_issues, 1);
@@ -31,7 +31,7 @@ fn test_issue_creation() {
         description: "Potential SQL injection vulnerability".to_string(),
         commit_status: CommitStatus::Modified,
     };
-    
+
     assert_eq!(issue.file, "src/main.rs");
     assert_eq!(issue.line, 42);
     assert_eq!(issue.severity, "High");
@@ -42,13 +42,13 @@ fn test_issue_creation() {
 
 #[test]
 fn test_commit_status_variants() {
-    let statuses = vec![
+    let statuses = [
         CommitStatus::Committed,
         CommitStatus::Staged,
         CommitStatus::Modified,
         CommitStatus::Untracked,
     ];
-    
+
     assert_eq!(statuses.len(), 4);
 }
 
@@ -72,7 +72,7 @@ fn test_review_with_issues() {
             commit_status: CommitStatus::Modified,
         },
     ];
-    
+
     let review = Review {
         files_count: 2,
         issues_count: 2,
@@ -82,7 +82,7 @@ fn test_review_with_issues() {
         low_issues: 0,
         issues: issues.clone(),
     };
-    
+
     assert_eq!(review.issues.len(), 2);
     assert_eq!(review.issues[0].severity, "Critical");
     assert_eq!(review.issues[1].severity, "Medium");
@@ -97,22 +97,20 @@ fn test_review_serialization() {
         high_issues: 1,
         medium_issues: 0,
         low_issues: 0,
-        issues: vec![
-            Issue {
-                file: "test.rs".to_string(),
-                line: 5,
-                severity: "High".to_string(),
-                category: "Bug".to_string(),
-                description: "Possible null pointer dereference".to_string(),
-                commit_status: CommitStatus::Committed,
-            }
-        ],
+        issues: vec![Issue {
+            file: "test.rs".to_string(),
+            line: 5,
+            severity: "High".to_string(),
+            category: "Bug".to_string(),
+            description: "Possible null pointer dereference".to_string(),
+            commit_status: CommitStatus::Committed,
+        }],
     };
-    
+
     let json = serde_json::to_string(&review).unwrap();
     assert!(json.contains("\"files_count\":1"));
     assert!(json.contains("\"test.rs\""));
-    
+
     let deserialized: Review = serde_json::from_str(&json).unwrap();
     assert_eq!(deserialized.files_count, review.files_count);
     assert_eq!(deserialized.issues.len(), review.issues.len());

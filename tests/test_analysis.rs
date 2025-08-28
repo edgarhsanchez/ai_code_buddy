@@ -1,5 +1,4 @@
-#![cfg(any())]
-// Disabled outdated analysis tests
+// Re-enabled analysis tests for improved coverage
 use ai_code_buddy::args::{Args, OutputFormat};
 use ai_code_buddy::core::analysis::perform_analysis;
 use anyhow::Result;

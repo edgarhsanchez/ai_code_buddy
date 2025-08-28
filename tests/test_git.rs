@@ -1,4 +1,5 @@
 use ai_code_buddy::core::git::GitAnalyzer;
+use ai_code_buddy::core::review::CommitStatus;
 use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
@@ -120,4 +121,116 @@ fn test_get_file_content_nonexistent() {
 
     let content = analyzer.get_file_content("nonexistent.rs", "HEAD");
     assert!(content.is_err());
+}
+
+#[test]
+fn test_get_file_content_staged_file() {
+    let (_temp_dir, repo_path) = create_test_repo();
+
+    // Create and stage a file
+    fs::write(format!("{repo_path}/staged.rs"), "fn staged() {}").unwrap();
+
+    Command::new("git")
+        .args(["add", "staged.rs"])
+        .current_dir(&repo_path)
+        .output()
+        .unwrap();
+
+    let analyzer = GitAnalyzer::new(&repo_path).unwrap();
+    let content = analyzer.get_file_content("staged.rs", "HEAD");
+    assert!(content.is_ok());
+    assert_eq!(content.unwrap(), "fn staged() {}");
+}
+
+#[test]
+fn test_get_file_content_modified_file() {
+    let (_temp_dir, repo_path) = create_test_repo();
+
+    // Create and commit a file
+    fs::write(format!("{repo_path}/modified.rs"), "fn original() {}").unwrap();
+    Command::new("git")
+        .args(["add", "modified.rs"])
+        .current_dir(&repo_path)
+        .output()
+        .unwrap();
+    Command::new("git")
+        .args(["commit", "-m", "Add modified file"])
+        .current_dir(&repo_path)
+        .output()
+        .unwrap();
+
+    // Modify the file
+    fs::write(format!("{repo_path}/modified.rs"), "fn modified() {}").unwrap();
+
+    let analyzer = GitAnalyzer::new(&repo_path).unwrap();
+    let content = analyzer.get_file_content("modified.rs", "HEAD");
+    assert!(content.is_ok());
+    assert_eq!(content.unwrap(), "fn modified() {}");
+}
+
+#[test]
+fn test_get_file_status_staged() {
+    let (_temp_dir, repo_path) = create_test_repo();
+
+    // Create and stage a file
+    fs::write(format!("{repo_path}/staged_status.rs"), "fn test() {}").unwrap();
+    Command::new("git")
+        .args(["add", "staged_status.rs"])
+        .current_dir(&repo_path)
+        .output()
+        .unwrap();
+
+    let analyzer = GitAnalyzer::new(&repo_path).unwrap();
+    let status = analyzer.get_file_status("staged_status.rs");
+    assert!(status.is_ok());
+    assert!(matches!(status.unwrap(), CommitStatus::Staged));
+}
+
+#[test]
+fn test_get_file_status_modified() {
+    let (_temp_dir, repo_path) = create_test_repo();
+
+    // Create and commit a file
+    fs::write(format!("{repo_path}/modified_status.rs"), "fn test() {}").unwrap();
+    Command::new("git")
+        .args(["add", "modified_status.rs"])
+        .current_dir(&repo_path)
+        .output()
+        .unwrap();
+    Command::new("git")
+        .args(["commit", "-m", "Add file"])
+        .current_dir(&repo_path)
+        .output()
+        .unwrap();
+
+    // Modify the file
+    fs::write(format!("{repo_path}/modified_status.rs"), "fn modified() {}").unwrap();
+
+    let analyzer = GitAnalyzer::new(&repo_path).unwrap();
+    let status = analyzer.get_file_status("modified_status.rs");
+    assert!(status.is_ok());
+    assert!(matches!(status.unwrap(), CommitStatus::Modified));
+}
+
+#[test]
+fn test_get_file_status_untracked() {
+    let (_temp_dir, repo_path) = create_test_repo();
+
+    // Create an untracked file
+    fs::write(format!("{repo_path}/untracked.rs"), "fn test() {}").unwrap();
+
+    let analyzer = GitAnalyzer::new(&repo_path).unwrap();
+    let status = analyzer.get_file_status("untracked.rs");
+    assert!(status.is_ok());
+    assert!(matches!(status.unwrap(), CommitStatus::Untracked));
+}
+
+#[test]
+fn test_get_file_status_committed() {
+    let (_temp_dir, repo_path) = create_test_repo();
+
+    let analyzer = GitAnalyzer::new(&repo_path).unwrap();
+    let status = analyzer.get_file_status("README.md");
+    assert!(status.is_ok());
+    assert!(matches!(status.unwrap(), CommitStatus::Committed));
 }

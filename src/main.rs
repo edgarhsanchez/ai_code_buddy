@@ -93,7 +93,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn initialize_app(mut next_state: ResMut<NextState<AppState>>, args: Res<args::Args>) {
+#[cfg_attr(test, allow(dead_code))]
+pub fn initialize_app(mut next_state: ResMut<NextState<AppState>>, args: Res<args::Args>) {
     println!(
         "🚀 AI Code Buddy v{} - Initializing...",
         crate::version::APP_VERSION
@@ -107,7 +108,8 @@ fn initialize_app(mut next_state: ResMut<NextState<AppState>>, args: Res<args::A
     next_state.set(AppState::Overview);
 }
 
-fn app_events_handler(
+#[cfg_attr(test, allow(dead_code))]
+pub fn app_events_handler(
     _app_state: Res<State<AppState>>,
     mut send_app_state: ResMut<NextState<AppState>>,
     mut app_events: EventReader<AppEvent>,
@@ -125,7 +127,8 @@ fn app_events_handler(
     }
 }
 
-fn keyboard_events_handler(
+#[cfg_attr(test, allow(dead_code))]
+pub fn keyboard_events_handler(
     app_state: Res<State<AppState>>,
     mut keyboard_events: EventReader<KeyEvent>,
     mut overview_events: EventWriter<events::overview::OverviewEvent>,
@@ -158,7 +161,9 @@ fn keyboard_events_handler(
     }
 }
 
-fn mouse_events_handler(
+#[cfg_attr(test, allow(dead_code))]
+#[cfg_attr(test, allow(dead_code))]
+pub fn mouse_events_handler(
     app_state: Res<State<AppState>>,
     mut mouse_events: EventReader<MouseEvent>,
     mut overview_events: EventWriter<events::overview::OverviewEvent>,

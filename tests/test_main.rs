@@ -1,10 +1,9 @@
-#![cfg(any())]
-// Disabled legacy main tests
+// Re-enabled main tests for improved coverage
 use ai_code_buddy::args::{Args, OutputFormat};
 use pretty_assertions::assert_eq;
 use tempfile::TempDir;
 
-// Disabled legacy main tests. Replaced with a trivial placeholder test.
+// Re-enabled main tests for improved coverage
 
 #[test]
 fn legacy_main_placeholder() {

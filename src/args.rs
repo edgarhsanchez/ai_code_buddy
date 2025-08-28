@@ -115,6 +115,13 @@ pub struct Args {
         conflicts_with = "use_gpu"
     )]
     pub force_cpu: bool,
+
+    /// Enable parallel file analysis using Rayon
+    #[arg(
+        long = "parallel",
+        help = "Enable parallel file analysis using all available CPU cores"
+    )]
+    pub parallel: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug, PartialEq)]

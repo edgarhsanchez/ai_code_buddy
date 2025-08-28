@@ -6,4 +6,5 @@ pub enum AppState {
     Overview,
     Analysis,
     Reports,
+    Credits,
 }

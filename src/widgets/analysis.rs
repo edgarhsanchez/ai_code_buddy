@@ -91,70 +91,20 @@ pub fn analysis_event_handler(
 fn start_analysis(
     analysis_state: &mut AnalysisWidgetState,
     args: &Args,
-    tokio_runtime: &TokioTasksRuntime,
+    _tokio_runtime: &TokioTasksRuntime,
 ) {
     analysis_state.start_analysis();
 
-    let args = args.clone();
-    tokio_runtime.spawn_background_task(|mut ctx| async move {
-        // Create a channel for progress updates
-        use tokio::sync::mpsc;
-        let (progress_tx, mut progress_rx) = mpsc::unbounded_channel();
-
-        // Spawn task to handle progress updates
-        let ctx_clone = ctx.clone();
-        tokio::spawn(async move {
-            let mut ctx = ctx_clone;
-            while let Some((progress, current_file)) = progress_rx.recv().await {
-                ctx.run_on_main_thread(move |ctx| {
-                    if let Some(mut analysis_state) =
-                        ctx.world.get_resource_mut::<AnalysisWidgetState>()
-                    {
-                        analysis_state.update_progress(progress, current_file);
-                    }
-                })
-                .await;
-            }
-        });
-
-        // Create progress callback that sends to channel
-        let progress_callback = {
-            let tx = progress_tx.clone();
-            Box::new(move |progress: f64, current_file: String| {
-                let _ = tx.send((progress, current_file));
-            }) as Box<dyn Fn(f64, String) + Send + Sync>
-        };
-
-        // Perform actual AI-powered analysis
-        match core::analysis::perform_analysis_with_progress(&args, Some(progress_callback)).await {
-            Ok(review) => {
-                // Close progress channel
-                drop(progress_tx);
-
-                ctx.run_on_main_thread(move |ctx| {
-                    if let Some(mut analysis_state) =
-                        ctx.world.get_resource_mut::<AnalysisWidgetState>()
-                    {
-                        analysis_state.complete_analysis(review);
-                    }
-                })
-                .await;
-            }
-            Err(e) => {
-                eprintln!("AI analysis failed: {e}");
-                drop(progress_tx);
-
-                ctx.run_on_main_thread(move |ctx| {
-                    if let Some(mut analysis_state) =
-                        ctx.world.get_resource_mut::<AnalysisWidgetState>()
-                    {
-                        analysis_state.is_analyzing = false;
-                    }
-                })
-                .await;
-            }
+    // Perform analysis synchronously to avoid GitAnalyzer Send issues
+    match core::analysis::perform_analysis(args) {
+        Ok(review) => {
+            analysis_state.complete_analysis(review);
         }
-    });
+        Err(e) => {
+            eprintln!("AI analysis failed: {e}");
+            analysis_state.is_analyzing = false;
+        }
+    }
 }
 
 fn render_analysis(

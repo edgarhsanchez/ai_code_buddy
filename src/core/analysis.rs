@@ -5,6 +5,8 @@ use crate::core::{
     review::Review,
 };
 use anyhow::Result;
+use num_cpus;
+use rayon::prelude::*;
 use tokio::sync::mpsc;
 
 pub async fn perform_analysis_with_progress(
@@ -59,6 +61,50 @@ pub async fn perform_analysis_with_progress(
 
     // Analyze each file
     let total_files = changed_files.len() as f64;
+    
+    if args.parallel {
+        println!("🚀 Using parallel analysis with {} CPU cores", num_cpus::get());
+        perform_parallel_analysis(
+            &changed_files,
+            args,
+            &git_analyzer,
+            &ai_analyzer,
+            progress_tx.clone(),
+            total_files,
+            &mut review,
+        ).await?;
+    } else {
+        println!("🔄 Using sequential analysis");
+        perform_sequential_analysis(
+            &changed_files,
+            args,
+            &git_analyzer,
+            &ai_analyzer,
+            progress_tx.clone(),
+            total_files,
+            &mut review,
+        ).await?;
+    }
+
+    // Close progress channel
+    drop(progress_tx);
+
+    println!(
+        "✅ AI analysis complete! Found {} issues.",
+        review.issues_count
+    );
+    Ok(review)
+}
+
+async fn perform_sequential_analysis(
+    changed_files: &[String],
+    args: &Args,
+    git_analyzer: &GitAnalyzer,
+    ai_analyzer: &AIAnalyzer,
+    progress_tx: mpsc::UnboundedSender<ProgressUpdate>,
+    total_files: f64,
+    review: &mut Review,
+) -> Result<()> {
     for (index, file_path) in changed_files.iter().enumerate() {
         if should_analyze_file(file_path, args) {
             let commit_status = git_analyzer
@@ -109,15 +155,98 @@ pub async fn perform_analysis_with_progress(
             }
         }
     }
+    Ok(())
+}
 
-    // Close progress channel
-    drop(progress_tx);
+async fn perform_parallel_analysis(
+    changed_files: &[String],
+    args: &Args,
+    git_analyzer: &GitAnalyzer,
+    ai_analyzer: &AIAnalyzer,
+    _progress_tx: mpsc::UnboundedSender<ProgressUpdate>,
+    total_files: f64,
+    review: &mut Review,
+) -> Result<()> {
+    // First, collect all file data in the main thread (since GitAnalyzer isn't Send)
+    let mut file_requests = Vec::new();
+    
+    for (index, file_path) in changed_files.iter().enumerate() {
+        if should_analyze_file(file_path, args) {
+            let commit_status = git_analyzer
+                .get_file_status(file_path)
+                .unwrap_or(crate::core::review::CommitStatus::Committed);
 
-    println!(
-        "✅ AI analysis complete! Found {} issues.",
-        review.issues_count
-    );
-    Ok(review)
+            if let Ok(content) = git_analyzer.get_file_content(file_path, &args.target_branch) {
+                let request = AnalysisRequest {
+                    file_path: file_path.clone(),
+                    content,
+                    language: detect_language(file_path),
+                    commit_status,
+                };
+                file_requests.push((index, request));
+            }
+        }
+    }
+
+    println!("📊 Processing {} files in parallel using {} threads", 
+             file_requests.len(), num_cpus::get());
+
+    // Now process the analysis requests in parallel
+    let analysis_results: Vec<_> = file_requests
+        .into_par_iter()
+        .map(|(index, request)| {
+            let file_path = request.file_path.clone();
+            let status_indicator = match request.commit_status {
+                crate::core::review::CommitStatus::Committed => "📄",
+                crate::core::review::CommitStatus::Staged => "📑",
+                crate::core::review::CommitStatus::Modified => "📝",
+                crate::core::review::CommitStatus::Untracked => "📄",
+            };
+
+            let file_progress = (index as f64 / total_files) * 100.0;
+            println!(
+                "  {status_indicator} Analyzing: {} ({:?}) [{:.1}%]",
+                file_path, request.commit_status, file_progress
+            );
+
+            // Perform synchronous rule-based analysis (since AI is disabled)
+            match ai_analyzer.rule_based_analysis(&request) {
+                Ok(issues) => {
+                    println!("    ✅ Found {} issues in {}", issues.len(), file_path);
+                    Ok(issues)
+                }
+                Err(e) => {
+                    eprintln!("⚠️  Failed to analyze {}: {}", file_path, e);
+                    Err(e)
+                }
+            }
+        })
+        .collect();
+
+    // Collect results
+    for result in analysis_results {
+        match result {
+            Ok(issues) => {
+                for issue in issues {
+                    match issue.severity.as_str() {
+                        "Critical" => review.critical_issues += 1,
+                        "High" => review.high_issues += 1,
+                        "Medium" => review.medium_issues += 1,
+                        "Low" => review.low_issues += 1,
+                        _ => {}
+                    }
+                    review.issues.push(issue);
+                    review.issues_count += 1;
+                }
+            }
+            Err(e) => {
+                eprintln!("⚠️  Analysis failed: {}", e);
+            }
+        }
+    }
+
+    println!("🎯 Parallel analysis complete!");
+    Ok(())
 }
 
 pub fn perform_analysis(args: &Args) -> Result<Review> {

@@ -136,8 +136,8 @@ fn handle_selection(component: &OverviewComponent, app_events: &mut EventWriter<
         OverviewComponent::ViewReports => {
             app_events.send(AppEvent::SwitchTo(AppState::Reports));
         }
-        OverviewComponent::Settings => {
-            // TODO: Implement settings
+        OverviewComponent::Credits => {
+            app_events.send(AppEvent::SwitchTo(AppState::Credits));
         }
         OverviewComponent::Help => {
             // Show help dialog - for now we'll add this as a state toggle
@@ -269,7 +269,7 @@ impl OverviewWidget {
                 Constraint::Length(1), // Spacer
                 Constraint::Length(3), // View Reports
                 Constraint::Length(1), // Spacer
-                Constraint::Length(3), // Settings
+                Constraint::Length(3), // Credits
                 Constraint::Length(1), // Spacer
                 Constraint::Length(3), // Help
                 Constraint::Length(1), // Spacer
@@ -297,8 +297,8 @@ impl OverviewWidget {
             items_layout[4],
             buf,
             state,
-            OverviewComponent::Settings,
-            "⚙️  Settings",
+            OverviewComponent::Credits,
+            "🎉 Credits",
         );
 
         self.render_menu_button(
@@ -421,7 +421,7 @@ impl OverviewWidget {
             Line::from("📋 Menu Options:"),
             Line::from("  • 🚀 Start Analysis: Begin analyzing the repository"),
             Line::from("  • 📊 View Reports: See analysis results and export"),
-            Line::from("  • ⚙️  Settings: Configure analysis options"),
+            Line::from("  • 🎉 Credits: View project contributors and acknowledgments"),
             Line::from("  • ❓ Help: Show this help screen"),
             Line::from("  • 🚪 Exit: Quit the application"),
             Line::from(""),

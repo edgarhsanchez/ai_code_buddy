@@ -23,13 +23,13 @@ pub struct Contributor {
 pub fn get_project_contributors() -> Vec<Contributor> {
     vec![
         Contributor {
-            name: " 74 Edgar Sanchez",
+            name: "Edgar Sanchez",
             email: "esanchez@m2iab.com",
-            contributions: 74,
+            contributions: 75,
         }
 ,
         Contributor {
-            name: " 14 Edgar H Sanchez",
+            name: "Edgar H Sanchez",
             email: "esanchez@m2iab.com",
             contributions: 14,
         }
@@ -41,7 +41,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
     vec![
         LibraryInfo {
             name: "anyhow",
-            version: "anyhow = "1.0.95"",
+            version: "1.0.95",
             license: "MIT OR Apache-2.0",
             description: "Flexible concrete Error type built on std::error::Error",
             repository: "https://github.com/dtolnay/anyhow",
@@ -59,7 +59,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "bevy_ratatui",
-            version: "bevy_ratatui = "0.7.0"",
+            version: "0.7.0",
             license: "MIT OR Apache-2.0",
             description: "A Bevy plugin for Ratatui (terminal UI library)",
             repository: "https://github.com/bevy-ratatui/bevy_ratatui",
@@ -68,7 +68,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "bevy-tokio-tasks",
-            version: "bevy-tokio-tasks = "0.15.0"",
+            version: "0.15.0",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/bevy-tokio-tasks",
@@ -86,7 +86,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "color-eyre",
-            version: "color-eyre = "0.6.3"",
+            version: "0.6.3",
             license: "MIT OR Apache-2.0",
             description: "An error report handler for panics and eyre::Report",
             repository: "https://github.com/eyre-rs/color-eyre",
@@ -95,7 +95,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "crossterm",
-            version: "crossterm = "0.28.1"",
+            version: "0.28.1",
             license: "MIT",
             description: "Cross-platform terminal manipulation library",
             repository: "https://github.com/crossterm-rs/crossterm",
@@ -104,7 +104,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "futures",
-            version: "futures = "0.3.31"",
+            version: "0.3.31",
             license: "MIT OR Apache-2.0",
             description: "An implementation of futures and streams featuring zero allocations",
             repository: "https://github.com/rust-lang/futures-rs",
@@ -113,7 +113,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "git2",
-            version: "git2 = "0.19"",
+            version: "0.19",
             license: "MIT OR Apache-2.0",
             description: "Rust bindings to libgit2 for interoperating with git repositories",
             repository: "https://github.com/rust-lang/git2-rs",
@@ -122,7 +122,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "insta",
-            version: "insta = "1.40.0"",
+            version: "1.40.0",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/insta",
@@ -140,7 +140,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "mockall",
-            version: "mockall = "0.13.0"",
+            version: "0.13.0",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/mockall",
@@ -149,7 +149,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "pretty_assertions",
-            version: "pretty_assertions = "1.4.1"",
+            version: "1.4.1",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/pretty_assertions",
@@ -158,7 +158,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "proptest",
-            version: "proptest = "1.5.0"",
+            version: "1.5.0",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/proptest",
@@ -167,7 +167,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "rat-cursor",
-            version: "rat-cursor = "1.2.0"",
+            version: "1.2.0",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/rat-cursor",
@@ -176,7 +176,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "rat-event",
-            version: "rat-event = "1.1.0"",
+            version: "1.1.0",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/rat-event",
@@ -185,7 +185,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "rat-focus",
-            version: "rat-focus = "0.31.0"",
+            version: "0.31.0",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/rat-focus",
@@ -203,7 +203,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "regex",
-            version: "regex = "1.11.1"",
+            version: "1.11.1",
             license: "MIT OR Apache-2.0",
             description: "An implementation of regular expressions for Rust",
             repository: "https://github.com/rust-lang/regex",
@@ -212,7 +212,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "rstest",
-            version: "rstest = "0.23.0"",
+            version: "0.23.0",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/rstest",
@@ -230,7 +230,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "serde_json",
-            version: "serde_json = "1.0"",
+            version: "1.0",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/serde_json",
@@ -239,7 +239,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "serial_test",
-            version: "serial_test = "3.1.1"",
+            version: "3.1.1",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/serial_test",
@@ -248,7 +248,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "tempfile",
-            version: "tempfile = "3.13.0"",
+            version: "3.13.0",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/tempfile",
@@ -266,7 +266,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
 ,
         LibraryInfo {
             name: "tokio-test",
-            version: "tokio-test = "0.4.4"",
+            version: "0.4.4",
             license: "Unknown",
             description: "Rust library dependency",
             repository: "https://crates.io/crates/tokio-test",

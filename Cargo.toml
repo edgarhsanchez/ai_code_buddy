@@ -23,7 +23,8 @@ color-eyre = "0.6.3"
 crossterm = "0.28.1"
 futures = "0.3.31"
 git2 = "0.19"
-kalosm = { version = "0.4.0", features = ["language"] }
+# Avoid pulling GPU backends (e.g., CUDA via cudarc) by default; opt-in via our cargo features
+kalosm = { version = "0.4.0", default-features = false, features = ["language"] }
 rat-cursor = "1.2.0"
 rat-event = "1.1.0"
 rat-focus = "0.31.0"
@@ -50,7 +51,10 @@ default = ["auto-gpu"]
 auto-gpu = []
 # GPU acceleration features - these add the respective features to kalosm
 gpu-metal = ["kalosm/metal"]
-gpu-cuda = ["kalosm/cuda"] 
+# Keep `gpu-cuda` as a no-op feature for dependency graph on non-Windows.
+# Windows-specific CI can use this feature as a marker; dependency-level CUDA enablement is intentionally avoided here
+# to prevent cudarc/nvcc from being pulled on other platforms.
+gpu-cuda = []
 gpu-mkl = ["kalosm/mkl"]
 
 [build-dependencies]
@@ -67,4 +71,5 @@ opt-level = 3
 [profile.release]
 lto = true
 opt-level = 3
+
 

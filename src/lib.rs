@@ -2,6 +2,18 @@ pub mod args;
 pub mod core;
 pub mod theme;
 
+// Platform guards for GPU features to keep CI/platform builds sane
+// NVIDIA CUDA must only be built on Windows runners
+#[cfg(all(feature = "gpu-cuda", not(target_os = "windows")))]
+compile_error!(
+    "The `gpu-cuda` feature is only supported on Windows builds. Remove the feature or run on a Windows runner."
+);
+// Apple Metal must only be built on macOS
+#[cfg(all(feature = "gpu-metal", not(target_os = "macos")))]
+compile_error!(
+    "The `gpu-metal` feature is only supported on macOS builds. Remove the feature or run on a macOS runner."
+);
+
 pub mod widgets {
     pub mod analysis;
     pub mod overview;

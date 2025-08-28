@@ -27,19 +27,19 @@ fn main() {
 fn detect_gpu_capabilities() -> Vec<String> {
     let mut features = Vec::new();
 
-    // Detect Apple Silicon (Metal)
-    if is_apple_silicon() {
+    // Detect Apple Silicon (Metal) — only on macOS
+    if cfg!(target_os = "macos") && is_apple_silicon() {
         features.push("gpu-metal".to_string());
         eprintln!("🍎 Build: Apple Silicon detected - enabling Metal GPU support");
     }
 
-    // Detect NVIDIA GPU (CUDA)
-    if has_nvidia_gpu() {
+    // Detect NVIDIA GPU (CUDA) — only enable on Windows builds per policy
+    if cfg!(target_os = "windows") && has_nvidia_gpu() {
         features.push("gpu-cuda".to_string());
         eprintln!("🟢 Build: NVIDIA GPU detected - enabling CUDA support");
     }
 
-    // Detect Intel MKL
+    // Detect Intel MKL — keep generic, but it won't pull CUDA
     if has_intel_mkl() {
         features.push("gpu-mkl".to_string());
         eprintln!("🔵 Build: Intel MKL detected - enabling MKL support");

@@ -6,21 +6,12 @@ use ai_code_buddy::{
     widget_states::overview::{
         OverviewComponent, OverviewWidgetState, RepoInfo, SelectionDirection,
     },
-    widgets::overview::{OverviewWidget, initialize_overview_state, overview_event_handler},
+    widgets::overview::{initialize_overview_state, overview_event_handler, OverviewWidget},
 };
-use bevy::{
-    app::App,
-    ecs::event::Events,
-    prelude::*,
-    state::app::StatesPlugin,
-};
+use bevy::{app::App, ecs::event::Events, prelude::*, state::app::StatesPlugin};
 use bevy_ratatui::event::{KeyEvent, MouseEvent};
-use crossterm::event::{KeyCode, KeyEventKind, KeyModifiers, MouseEventKind, MouseButton};
-use ratatui::{
-    buffer::Buffer,
-    layout::Rect,
-    widgets::StatefulWidgetRef,
-};
+use crossterm::event::{KeyCode, KeyEventKind, KeyModifiers, MouseButton, MouseEventKind};
+use ratatui::{buffer::Buffer, layout::Rect, widgets::StatefulWidgetRef};
 
 // Test initialization
 #[test]
@@ -80,25 +71,36 @@ fn test_overview_keyboard_navigation() {
         });
 
     // Set initial state
-    let mut state = app.world_mut().get_resource_mut::<NextState<AppState>>().unwrap();
+    let mut state = app
+        .world_mut()
+        .get_resource_mut::<NextState<AppState>>()
+        .unwrap();
     state.set(AppState::Overview);
     app.update();
 
     // Send Tab key event
-    let mut events = app.world_mut().get_resource_mut::<Events<OverviewEvent>>().unwrap();
-    events.send(OverviewEvent::KeyEvent(KeyEvent(crossterm::event::KeyEvent {
-        code: KeyCode::Tab,
-        modifiers: KeyModifiers::empty(),
-        kind: KeyEventKind::Release,
-        state: crossterm::event::KeyEventState::empty(),
-    })));
+    let mut events = app
+        .world_mut()
+        .get_resource_mut::<Events<OverviewEvent>>()
+        .unwrap();
+    events.send(OverviewEvent::KeyEvent(KeyEvent(
+        crossterm::event::KeyEvent {
+            code: KeyCode::Tab,
+            modifiers: KeyModifiers::empty(),
+            kind: KeyEventKind::Release,
+            state: crossterm::event::KeyEventState::empty(),
+        },
+    )));
 
     // Add the event handler system
     app.add_systems(Update, overview_event_handler);
     app.update();
 
     let overview_state = app.world().get_resource::<OverviewWidgetState>().unwrap();
-    assert_eq!(overview_state.selected_component, OverviewComponent::ViewReports);
+    assert_eq!(
+        overview_state.selected_component,
+        OverviewComponent::ViewReports
+    );
 }
 
 // Test widget state methods
@@ -117,7 +119,12 @@ fn test_overview_widget_state_methods() {
     // Test is_over method
     state.registered_components.insert(
         OverviewComponent::Help,
-        Rect { x: 5, y: 5, width: 10, height: 5 },
+        Rect {
+            x: 5,
+            y: 5,
+            width: 10,
+            height: 5,
+        },
     );
 
     assert!(state.is_over(OverviewComponent::Help, 7, 7)); // Inside rect
@@ -150,11 +157,21 @@ fn test_overview_widget_rendering() {
 
     // Verify that components were registered during rendering
     assert!(!state.registered_components.is_empty());
-    assert!(state.registered_components.contains_key(&OverviewComponent::StartAnalysis));
-    assert!(state.registered_components.contains_key(&OverviewComponent::ViewReports));
-    assert!(state.registered_components.contains_key(&OverviewComponent::Settings));
-    assert!(state.registered_components.contains_key(&OverviewComponent::Help));
-    assert!(state.registered_components.contains_key(&OverviewComponent::Exit));
+    assert!(state
+        .registered_components
+        .contains_key(&OverviewComponent::StartAnalysis));
+    assert!(state
+        .registered_components
+        .contains_key(&OverviewComponent::ViewReports));
+    assert!(state
+        .registered_components
+        .contains_key(&OverviewComponent::Settings));
+    assert!(state
+        .registered_components
+        .contains_key(&OverviewComponent::Help));
+    assert!(state
+        .registered_components
+        .contains_key(&OverviewComponent::Exit));
 }
 
 // Test edge cases

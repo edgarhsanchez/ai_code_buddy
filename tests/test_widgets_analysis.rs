@@ -8,12 +8,7 @@ use ai_code_buddy::{
     widget_states::analysis::AnalysisWidgetState,
     widgets::analysis::{AnalysisPlugin, AnalysisWidget},
 };
-use bevy::{
-    app::App,
-    ecs::event::Events,
-    prelude::*,
-    state::app::StatesPlugin,
-};
+use bevy::{app::App, ecs::event::Events, prelude::*, state::app::StatesPlugin};
 use bevy_ratatui::event::{KeyEvent as BevyKeyEvent, MouseEvent};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
@@ -193,8 +188,12 @@ fn test_analysis_widget_render_default_state() {
             title_text.push_str(cell.symbol());
         }
     }
-    
-    assert!(title_text.contains("Code Analysis"), "Title should contain 'Code Analysis', found: '{}'", title_text);
+
+    assert!(
+        title_text.contains("Code Analysis"),
+        "Title should contain 'Code Analysis', found: '{}'",
+        title_text
+    );
 }
 
 #[test]
@@ -338,16 +337,25 @@ fn test_analysis_event_handler_escape_key() {
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 
     // Set state to Analysis
-    let mut state = app.world_mut().get_resource_mut::<NextState<AppState>>().unwrap();
+    let mut state = app
+        .world_mut()
+        .get_resource_mut::<NextState<AppState>>()
+        .unwrap();
     state.set(AppState::Analysis);
     app.update();
 
     // Set up analyzing state
-    let mut analysis_state = app.world_mut().get_resource_mut::<AnalysisWidgetState>().unwrap();
+    let mut analysis_state = app
+        .world_mut()
+        .get_resource_mut::<AnalysisWidgetState>()
+        .unwrap();
     analysis_state.is_analyzing = true;
 
     // Send escape key event
-    let mut events = app.world_mut().get_resource_mut::<Events<AnalysisEvent>>().unwrap();
+    let mut events = app
+        .world_mut()
+        .get_resource_mut::<Events<AnalysisEvent>>()
+        .unwrap();
     events.send(AnalysisEvent::KeyEvent(BevyKeyEvent(KeyEvent {
         code: KeyCode::Esc,
         modifiers: KeyModifiers::empty(),
@@ -356,7 +364,10 @@ fn test_analysis_event_handler_escape_key() {
     })));
 
     // Add the system
-    app.add_systems(Update, ai_code_buddy::widgets::analysis::analysis_event_handler);
+    app.add_systems(
+        Update,
+        ai_code_buddy::widgets::analysis::analysis_event_handler,
+    );
     app.add_systems(Update, app_events_handler);
 
     app.update();
@@ -396,12 +407,18 @@ fn test_analysis_event_handler_enter_key_start_analysis() {
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 
     // Set state to Analysis
-    let mut state = app.world_mut().get_resource_mut::<NextState<AppState>>().unwrap();
+    let mut state = app
+        .world_mut()
+        .get_resource_mut::<NextState<AppState>>()
+        .unwrap();
     state.set(AppState::Analysis);
     app.update();
 
     // Send enter key event
-    let mut events = app.world_mut().get_resource_mut::<Events<AnalysisEvent>>().unwrap();
+    let mut events = app
+        .world_mut()
+        .get_resource_mut::<Events<AnalysisEvent>>()
+        .unwrap();
     events.send(AnalysisEvent::KeyEvent(BevyKeyEvent(KeyEvent {
         code: KeyCode::Enter,
         modifiers: KeyModifiers::empty(),
@@ -410,7 +427,10 @@ fn test_analysis_event_handler_enter_key_start_analysis() {
     })));
 
     // Add the system
-    app.add_systems(Update, ai_code_buddy::widgets::analysis::analysis_event_handler);
+    app.add_systems(
+        Update,
+        ai_code_buddy::widgets::analysis::analysis_event_handler,
+    );
 
     app.update();
 
@@ -445,12 +465,18 @@ fn test_analysis_event_handler_navigation_keys() {
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 
     // Set state to Analysis
-    let mut state = app.world_mut().get_resource_mut::<NextState<AppState>>().unwrap();
+    let mut state = app
+        .world_mut()
+        .get_resource_mut::<NextState<AppState>>()
+        .unwrap();
     state.set(AppState::Analysis);
     app.update();
 
     // Set up completed analysis with issues
-    let mut analysis_state = app.world_mut().get_resource_mut::<AnalysisWidgetState>().unwrap();
+    let mut analysis_state = app
+        .world_mut()
+        .get_resource_mut::<AnalysisWidgetState>()
+        .unwrap();
     let review = Review {
         issues: vec![
             Issue {
@@ -476,7 +502,10 @@ fn test_analysis_event_handler_navigation_keys() {
     analysis_state.selected_issue = 0;
 
     // Send down arrow key event
-    let mut events = app.world_mut().get_resource_mut::<Events<AnalysisEvent>>().unwrap();
+    let mut events = app
+        .world_mut()
+        .get_resource_mut::<Events<AnalysisEvent>>()
+        .unwrap();
     events.send(AnalysisEvent::KeyEvent(BevyKeyEvent(KeyEvent {
         code: KeyCode::Down,
         modifiers: KeyModifiers::empty(),
@@ -485,7 +514,10 @@ fn test_analysis_event_handler_navigation_keys() {
     })));
 
     // Add the system
-    app.add_systems(Update, ai_code_buddy::widgets::analysis::analysis_event_handler);
+    app.add_systems(
+        Update,
+        ai_code_buddy::widgets::analysis::analysis_event_handler,
+    );
 
     app.update();
 
@@ -519,12 +551,18 @@ fn test_analysis_event_handler_reports_key() {
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 
     // Set state to Analysis
-    let mut state = app.world_mut().get_resource_mut::<NextState<AppState>>().unwrap();
+    let mut state = app
+        .world_mut()
+        .get_resource_mut::<NextState<AppState>>()
+        .unwrap();
     state.set(AppState::Analysis);
     app.update();
 
     // Send 'r' key event
-    let mut events = app.world_mut().get_resource_mut::<Events<AnalysisEvent>>().unwrap();
+    let mut events = app
+        .world_mut()
+        .get_resource_mut::<Events<AnalysisEvent>>()
+        .unwrap();
     events.send(AnalysisEvent::KeyEvent(BevyKeyEvent(KeyEvent {
         code: KeyCode::Char('r'),
         modifiers: KeyModifiers::empty(),
@@ -533,15 +571,24 @@ fn test_analysis_event_handler_reports_key() {
     })));
 
     // Add the system
-    app.add_systems(Update, ai_code_buddy::widgets::analysis::analysis_event_handler);
+    app.add_systems(
+        Update,
+        ai_code_buddy::widgets::analysis::analysis_event_handler,
+    );
 
     app.update();
 
     // Check that app event was sent to switch to reports
-    let app_events = app.world().get_resource::<Events<ai_code_buddy::events::app::AppEvent>>().unwrap();
+    let app_events = app
+        .world()
+        .get_resource::<Events<ai_code_buddy::events::app::AppEvent>>()
+        .unwrap();
     let mut cursor = app_events.get_cursor();
     let switch_found = cursor.read(app_events).any(|event| {
-        matches!(event, ai_code_buddy::events::app::AppEvent::SwitchTo(AppState::Reports))
+        matches!(
+            event,
+            ai_code_buddy::events::app::AppEvent::SwitchTo(AppState::Reports)
+        )
     });
     assert!(switch_found, "Should have sent switch to reports event");
 }
@@ -549,8 +596,7 @@ fn test_analysis_event_handler_reports_key() {
 #[test]
 fn test_analysis_plugin_setup() {
     let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(AnalysisPlugin);
+    app.add_plugins(MinimalPlugins).add_plugins(AnalysisPlugin);
 
     // Check that resources were initialized
     let analysis_state = app.world().get_resource::<AnalysisWidgetState>();

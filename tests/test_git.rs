@@ -204,7 +204,11 @@ fn test_get_file_status_modified() {
         .unwrap();
 
     // Modify the file
-    fs::write(format!("{repo_path}/modified_status.rs"), "fn modified() {}").unwrap();
+    fs::write(
+        format!("{repo_path}/modified_status.rs"),
+        "fn modified() {}",
+    )
+    .unwrap();
 
     let analyzer = GitAnalyzer::new(&repo_path).unwrap();
     let status = analyzer.get_file_status("modified_status.rs");

@@ -1,16 +1,11 @@
 use ai_code_buddy::{
+    app_events_handler,
     args::{Args, OutputFormat},
     bevy_states::app::AppState,
     events::app::AppEvent,
     initialize_app,
-    app_events_handler,
 };
-use bevy::{
-    app::App,
-    ecs::event::Events,
-    prelude::*,
-    state::app::StatesPlugin,
-};
+use bevy::{app::App, ecs::event::Events, prelude::*, state::app::StatesPlugin};
 
 #[test]
 fn test_initialize_app() {
@@ -55,14 +50,20 @@ fn test_app_events_handler_switch_state() {
         .add_event::<AppEvent>();
 
     // Set initial state
-    let mut next_state = app.world_mut().get_resource_mut::<NextState<AppState>>().unwrap();
+    let mut next_state = app
+        .world_mut()
+        .get_resource_mut::<NextState<AppState>>()
+        .unwrap();
     next_state.set(AppState::Overview);
 
     // Update to apply the initial state
     app.update();
 
     // Send switch state event
-    let mut events = app.world_mut().get_resource_mut::<Events<AppEvent>>().unwrap();
+    let mut events = app
+        .world_mut()
+        .get_resource_mut::<Events<AppEvent>>()
+        .unwrap();
     events.send(AppEvent::SwitchTo(AppState::Analysis));
 
     // Add the system
@@ -88,7 +89,10 @@ fn test_app_events_handler_exit() {
         .add_event::<AppEvent>();
 
     // Send exit event
-    let mut events = app.world_mut().get_resource_mut::<Events<AppEvent>>().unwrap();
+    let mut events = app
+        .world_mut()
+        .get_resource_mut::<Events<AppEvent>>()
+        .unwrap();
     events.send(AppEvent::Exit);
 
     // Add the system
@@ -111,12 +115,18 @@ fn test_app_events_handler_multiple_events() {
         .add_event::<AppEvent>();
 
     // Set initial state
-    let mut next_state = app.world_mut().get_resource_mut::<NextState<AppState>>().unwrap();
+    let mut next_state = app
+        .world_mut()
+        .get_resource_mut::<NextState<AppState>>()
+        .unwrap();
     next_state.set(AppState::Overview);
     app.update();
 
     // Send multiple events
-    let mut events = app.world_mut().get_resource_mut::<Events<AppEvent>>().unwrap();
+    let mut events = app
+        .world_mut()
+        .get_resource_mut::<Events<AppEvent>>()
+        .unwrap();
     events.send(AppEvent::SwitchTo(AppState::Analysis));
     events.send(AppEvent::SwitchTo(AppState::Reports));
     events.send(AppEvent::Exit);
@@ -141,11 +151,7 @@ fn test_app_events_handler_multiple_events() {
 
 #[test]
 fn test_state_transitions() {
-    let states = vec![
-        AppState::Overview,
-        AppState::Analysis,
-        AppState::Reports,
-    ];
+    let states = vec![AppState::Overview, AppState::Analysis, AppState::Reports];
 
     for target_state in states {
         let mut app = App::new();
@@ -155,12 +161,18 @@ fn test_state_transitions() {
             .add_event::<AppEvent>();
 
         // Set initial state
-        let mut next_state = app.world_mut().get_resource_mut::<NextState<AppState>>().unwrap();
+        let mut next_state = app
+            .world_mut()
+            .get_resource_mut::<NextState<AppState>>()
+            .unwrap();
         next_state.set(AppState::Overview);
         app.update();
 
         // Send switch event
-        let mut events = app.world_mut().get_resource_mut::<Events<AppEvent>>().unwrap();
+        let mut events = app
+            .world_mut()
+            .get_resource_mut::<Events<AppEvent>>()
+            .unwrap();
         events.send(AppEvent::SwitchTo(target_state));
 
         // Add and run the system
@@ -231,7 +243,10 @@ fn test_app_events_handler_no_events() {
         .add_event::<AppEvent>();
 
     // Set initial state
-    let mut state = app.world_mut().get_resource_mut::<NextState<AppState>>().unwrap();
+    let mut state = app
+        .world_mut()
+        .get_resource_mut::<NextState<AppState>>()
+        .unwrap();
     state.set(AppState::Overview);
     app.update();
 

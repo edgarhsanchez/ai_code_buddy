@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 /// Information about a library dependency
 #[derive(Debug, Clone)]
 pub struct LibraryInfo {

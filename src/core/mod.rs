@@ -10,7 +10,7 @@ use crate::{
 use anyhow::Result;
 
 pub fn run_cli_mode(args: Args) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🔍 AI Code Review Tool v{} (CLI Mode)", APP_VERSION);
+    println!("🔍 AI Code Review Tool v{APP_VERSION} (CLI Mode)");
     println!("📂 Repository: {}", args.repo_path);
     println!(
         "🌿 Comparing: {} → {}",
@@ -37,7 +37,7 @@ pub fn run_cli_mode(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn show_credits() {
-    println!("🎉 AI Code Buddy v{} - Credits & Contributors", APP_VERSION);
+    println!("🎉 AI Code Buddy v{APP_VERSION} - Credits & Contributors");
     println!("==========================================");
     println!();
     println!("📚 About AI Code Buddy:");

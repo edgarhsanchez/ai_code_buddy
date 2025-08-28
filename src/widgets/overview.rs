@@ -206,7 +206,7 @@ impl StatefulWidgetRef for OverviewWidget {
 
 impl OverviewWidget {
     fn render_title(&self, area: Rect, buf: &mut Buffer) {
-        let title = Paragraph::new(format!("🤖 AI Code Buddy v{}", APP_VERSION))
+        let title = Paragraph::new(format!("🤖 AI Code Buddy v{APP_VERSION}"))
             .style(THEME.title_style())
             .alignment(Alignment::Center)
             .block(

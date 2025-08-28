@@ -464,8 +464,7 @@ impl AIAnalyzer {
                 severity: "Medium".to_string(),
                 category: "Maintainability".to_string(),
                 description: format!(
-                    "High complexity score ({}) - consider breaking into smaller functions",
-                    complexity_score
+                    "High complexity score ({complexity_score}) - consider breaking into smaller functions"
                 ),
                 commit_status: request.commit_status.clone(),
             });
@@ -515,7 +514,6 @@ impl AIAnalyzer {
     fn detect_architecture_issues(&self, lines: &[&str], request: &AnalysisRequest) -> bool {
         let mut method_count = 0;
         let mut field_count = 0;
-        let has_god_class;
 
         for line in lines {
             let trimmed = line.trim();
@@ -554,9 +552,7 @@ impl AIAnalyzer {
         }
 
         // God class detection: too many methods and fields
-        has_god_class = method_count > 20 || field_count > 15;
-
-        has_god_class
+        method_count > 20 || field_count > 15
     }
 
     fn calculate_complexity_score(&self, lines: &[&str]) -> u32 {

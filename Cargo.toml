@@ -1,6 +1,6 @@
 [package]
 name = "ai-code-buddy"
-version = "0.4.8"
+version = "0.4.9"
 edition = "2021"
 authors = ["Edgar H. Sanchez <esanchez@m2iab.com>"]
 description = "An AI-powered code review tool with elegant Bevy-based TUI"

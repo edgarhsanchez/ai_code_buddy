@@ -30,7 +30,7 @@ impl Plugin for AnalysisPlugin {
     }
 }
 
-fn analysis_event_handler(
+pub fn analysis_event_handler(
     mut analysis_events: EventReader<AnalysisEvent>,
     mut analysis_state: ResMut<AnalysisWidgetState>,
     mut app_events: EventWriter<AppEvent>,
@@ -174,7 +174,7 @@ fn render_analysis(
     Ok(())
 }
 
-struct AnalysisWidget;
+pub struct AnalysisWidget;
 
 impl StatefulWidgetRef for AnalysisWidget {
     type State = AnalysisWidgetState;

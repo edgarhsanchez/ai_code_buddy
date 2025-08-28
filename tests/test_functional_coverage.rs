@@ -1,5 +1,4 @@
-#![cfg(any())]
-// Disabled overlapping functional coverage tests to avoid API drift issues
+// Re-enabled functional coverage tests for improved coverage
 // Comprehensive functional tests to achieve high code coverage
 // This focuses on actual method calls rather than just data structure testing
 

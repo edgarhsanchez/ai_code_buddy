@@ -30,7 +30,7 @@ impl Plugin for OverviewPlugin {
     }
 }
 
-fn initialize_overview_state(mut overview_state: ResMut<OverviewWidgetState>, args: Res<Args>) {
+pub fn initialize_overview_state(mut overview_state: ResMut<OverviewWidgetState>, args: Res<Args>) {
     overview_state.repo_info.path = args.repo_path.clone();
     overview_state.repo_info.source_branch = args.source_branch.clone();
     overview_state.repo_info.target_branch = args.target_branch.clone();
@@ -39,7 +39,7 @@ fn initialize_overview_state(mut overview_state: ResMut<OverviewWidgetState>, ar
     overview_state.repo_info.files_to_analyze = 42; // Placeholder
 }
 
-fn overview_event_handler(
+pub fn overview_event_handler(
     mut overview_events: EventReader<OverviewEvent>,
     mut overview_state: ResMut<OverviewWidgetState>,
     mut app_events: EventWriter<AppEvent>,
@@ -166,7 +166,7 @@ fn render_overview(
     Ok(())
 }
 
-struct OverviewWidget;
+pub struct OverviewWidget;
 
 impl StatefulWidgetRef for OverviewWidget {
     type State = OverviewWidgetState;

@@ -1,5 +1,4 @@
-#![cfg(any())]
-// Disabled legacy integration tests
+// Re-enabled integration tests for improved coverage
 use ai_code_buddy::core::review::{CommitStatus, Issue, Review};
 use ai_code_buddy::widget_states::analysis::AnalysisWidgetState;
 use ai_code_buddy::widget_states::overview::{OverviewComponent, OverviewWidgetState};

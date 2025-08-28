@@ -102,12 +102,12 @@ jobs:
         # Binary should already be prepared in the build step
         ls -la ${{ matrix.asset_name }}
 
-    # - name: Publish to crates.io
-    #   run: |
-    #     echo "📦 Publishing to crates.io..."
-    #     cargo publish --allow-dirty
-    #   env:
-    #     CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    - name: Publish to crates.io
+      run: |
+        echo "📦 Publishing to crates.io..."
+        cargo publish --allow-dirty
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
     - name: Upload Release Asset
       uses: actions/github-script@v7

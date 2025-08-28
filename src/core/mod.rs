@@ -3,14 +3,14 @@ pub mod analysis;
 pub mod git;
 pub mod review;
 
-use crate::{args::{Args, OutputFormat}, version::APP_VERSION};
+use crate::{
+    args::{Args, OutputFormat},
+    version::APP_VERSION,
+};
 use anyhow::Result;
 
 pub fn run_cli_mode(args: Args) -> Result<(), Box<dyn std::error::Error>> {
-    println!(
-        "🔍 AI Code Review Tool v{} (CLI Mode)",
-        APP_VERSION
-    );
+    println!("🔍 AI Code Review Tool v{} (CLI Mode)", APP_VERSION);
     println!("📂 Repository: {}", args.repo_path);
     println!(
         "🌿 Comparing: {} → {}",
@@ -37,10 +37,7 @@ pub fn run_cli_mode(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn show_credits() {
-    println!(
-        "🎉 AI Code Buddy v{} - Credits & Contributors",
-        APP_VERSION
-    );
+    println!("🎉 AI Code Buddy v{} - Credits & Contributors", APP_VERSION);
     println!("==========================================");
     println!();
     println!("📚 About AI Code Buddy:");

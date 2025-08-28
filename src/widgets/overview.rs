@@ -13,8 +13,8 @@ use crate::{
     args::Args,
     bevy_states::app::AppState,
     events::{app::AppEvent, overview::OverviewEvent},
-    version::APP_VERSION,
     theme::THEME,
+    version::APP_VERSION,
     widget_states::overview::{OverviewComponent, OverviewWidgetState, SelectionDirection},
 };
 

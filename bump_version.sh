@@ -15,8 +15,6 @@ generate_credits() {
 
     # Create credits.rs file
     cat > src/core/credits.rs << 'EOF'
-use std::collections::HashMap;
-
 /// Information about a library dependency
 #[derive(Debug, Clone)]
 pub struct LibraryInfo {
@@ -226,7 +224,10 @@ pub fn display_comprehensive_credits() {
     println!("------------------------");
     let contributors = get_project_contributors();
     for contributor in contributors {
-        println!("  • {} <{}> ({} commits)", contributor.name, contributor.email, contributor.contributions);
+        println!(
+            "  • {} <{}> ({} commits)",
+            contributor.name, contributor.email, contributor.contributions
+        );
     }
     println!();
 
@@ -243,7 +244,7 @@ pub fn display_comprehensive_credits() {
         println!("   👥 Key Contributors:");
 
         for contributor in &library.contributors {
-            println!("     • {}", contributor);
+            println!("     • {contributor}");
         }
         println!();
     }
@@ -302,6 +303,12 @@ run_quality_checks() {
     echo "🔍 Running cargo clippy..."
     if ! cargo clippy -- -D warnings; then
         echo "❌ Clippy warnings found. Please fix them before proceeding."
+        exit 1
+    fi
+
+    echo "📝 Checking code formatting..."
+    if ! cargo fmt -- --check; then
+        echo "❌ Code formatting issues found. Please run 'cargo fmt' to fix them before proceeding."
         exit 1
     fi
 

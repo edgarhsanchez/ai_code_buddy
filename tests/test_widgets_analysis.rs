@@ -406,7 +406,6 @@ fn test_analysis_event_handler_enter_key_start_analysis() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
-
             parallel: false,
             disable_ai: false,
         })

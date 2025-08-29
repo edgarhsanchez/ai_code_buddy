@@ -20,6 +20,7 @@ fn test_run_cli_mode_with_credits() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     let result = run_cli_mode(args);
@@ -45,6 +46,7 @@ fn test_run_cli_mode_basic_functionality() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     // This should work even with an empty/non-git directory
@@ -79,6 +81,7 @@ fn test_run_cli_mode_different_output_formats() {
             use_gpu: false,
             force_cpu: false,
             parallel: false,
+            disable_ai: false,
         };
 
         let result = run_cli_mode(args);
@@ -105,6 +108,7 @@ fn test_run_cli_mode_with_patterns() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     let result = run_cli_mode(args);
@@ -130,6 +134,7 @@ fn test_run_cli_mode_verbose_mode() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     let result = run_cli_mode(args);
@@ -156,6 +161,7 @@ fn test_run_cli_mode_gpu_flags() {
         use_gpu: true,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     let result_gpu = run_cli_mode(args_gpu);
@@ -175,6 +181,7 @@ fn test_run_cli_mode_gpu_flags() {
         use_gpu: false,
         force_cpu: true,
         parallel: false,
+        disable_ai: false,
     };
 
     let result_cpu = run_cli_mode(args_cpu);
@@ -207,6 +214,7 @@ fn test_args_parsing_for_cli_mode() {
         use_gpu: true,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     assert_eq!(args.repo_path, "/test/path");
@@ -238,6 +246,7 @@ fn test_run_cli_mode_error_handling() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     let result = run_cli_mode(args);
@@ -263,6 +272,7 @@ fn test_run_cli_mode_different_branches() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     let result = run_cli_mode(args);

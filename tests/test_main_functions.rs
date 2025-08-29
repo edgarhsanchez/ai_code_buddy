@@ -36,6 +36,7 @@ fn build_app_with_state() -> App {
             use_gpu: false,
             force_cpu: true,
             parallel: false,
+            disable_ai: false,
         });
     app
 }
@@ -331,6 +332,7 @@ fn test_initialize_app_with_different_args() {
         use_gpu: true,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     app.add_plugins(StatesPlugin)

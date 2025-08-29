@@ -322,8 +322,56 @@ ai-code-buddy [OPTIONS] [REPO_PATH]
 | `--include <PATTERN>` | | Include only files matching glob pattern | None | `--include "src/**"` |
 | `--gpu` | | Enable GPU acceleration (auto-detected) | Auto-detected | `--gpu` |
 | `--cpu` | | Force CPU mode (disable GPU) | GPU if available | `--cpu` |
+| `--disable-ai` | | Disable AI-powered analysis | AI enabled | `--disable-ai` |
 | `--help` | `-h` | Print help information | | `--help` |
 | `--version` | `-V` | Print version information | | `--version` |
+
+### 🤖 AI-Powered Analysis
+
+AI Code Buddy features advanced AI-powered analysis that goes beyond traditional pattern matching to provide deeper insights into code quality, architecture, and maintainability.
+
+#### AI Analysis Features
+
+- **🧠 Enhanced Pattern Recognition**: Contextual understanding of code patterns and anti-patterns
+- **🏗️ Architecture Analysis**: Detection of God classes, complex methods, and structural issues
+- **🔄 Concurrency Analysis**: Identification of potential race conditions in multi-threaded code
+- **⚖️ Error Handling Assessment**: Consistency analysis of error handling patterns
+- **⚡ Performance Optimization**: Context-aware suggestions for performance improvements
+- **📏 Complexity Scoring**: Maintainability metrics and refactoring recommendations
+
+#### Using AI Analysis
+
+**Default Behavior (AI Enabled):**
+```bash
+# AI analysis is enabled by default for maximum insights
+ai-code-buddy --cli
+# Output: 🤖 AI inference enabled - using advanced AI analysis
+```
+
+**Disable AI Analysis (Rule-based Only):**
+```bash
+# Use traditional rule-based analysis only
+ai-code-buddy --cli --disable-ai
+# Output: 🔍 AI inference disabled - using rule-based analysis only
+```
+
+**Performance Comparison:**
+```bash
+# AI-enhanced analysis (more comprehensive)
+ai-code-buddy --cli --format summary
+# Result: ~33 issues detected
+
+# Rule-based analysis (faster)
+ai-code-buddy --cli --disable-ai --format summary  
+# Result: ~27 issues detected
+```
+
+#### When to Use Each Mode
+
+| Mode | Use Case | Pros | Cons |
+|------|----------|------|------|
+| **AI Enabled** (Default) | Comprehensive code review, architecture assessment | More thorough analysis, better insights | Slightly slower |
+| **AI Disabled** | Quick scans, CI/CD pipelines, performance-critical | Faster execution, consistent results | Fewer issues detected |
 
 ### Output Formats
 

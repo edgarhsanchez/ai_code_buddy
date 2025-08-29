@@ -123,6 +123,14 @@ pub struct Args {
         default_value = "true"
     )]
     pub parallel: bool,
+
+    /// Disable AI inference (experimental)
+    #[arg(
+        long = "disable-ai",
+        help = "Disable AI-powered analysis (experimental feature)",
+        default_value_t = false
+    )]
+    pub disable_ai: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug, PartialEq)]

@@ -39,7 +39,7 @@ pub async fn perform_analysis_with_progress(
     } else if args.use_gpu {
         println!("🚀 GPU acceleration enabled (auto-detected or requested)");
     }
-    let ai_analyzer = AIAnalyzer::new(use_gpu).await?;
+    let ai_analyzer = AIAnalyzer::new(use_gpu, !args.disable_ai).await?;
 
     // Create progress channel
     let (progress_tx, mut progress_rx) = mpsc::unbounded_channel::<ProgressUpdate>();
@@ -343,6 +343,7 @@ mod tests {
             use_gpu: false,
             force_cpu: true,
             parallel: false,
+            disable_ai: false,
         }
     }
 

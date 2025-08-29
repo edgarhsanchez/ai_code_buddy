@@ -27,6 +27,7 @@ fn test_initialize_app() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     app.insert_resource(args);
@@ -203,6 +204,7 @@ fn test_initialize_app_with_different_args() {
             use_gpu: true,
             force_cpu: false,
             parallel: false,
+            disable_ai: false,
         },
         Args {
             repo_path: ".".to_string(),
@@ -217,6 +219,7 @@ fn test_initialize_app_with_different_args() {
             use_gpu: false,
             force_cpu: true,
             parallel: false,
+            disable_ai: false,
         },
     ];
 
@@ -291,6 +294,7 @@ fn test_event_system_setup() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     app.insert_resource(args);

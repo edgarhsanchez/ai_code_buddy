@@ -98,6 +98,7 @@ fn test_perform_analysis_with_progress_covers_paths() {
         use_gpu: false,
         force_cpu: true,
         parallel: false,
+        disable_ai: false,
     };
 
     // Capture progress updates

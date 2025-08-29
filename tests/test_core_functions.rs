@@ -19,6 +19,7 @@ mod tests {
             use_gpu: false,
             force_cpu: true,
             parallel: false,
+            disable_ai: false,
         }
     }
 
@@ -66,6 +67,7 @@ mod tests {
             use_gpu: false,
             force_cpu: true,
             parallel: false,
+            disable_ai: false,
         };
 
         assert_eq!(args.include_patterns.len(), 2);

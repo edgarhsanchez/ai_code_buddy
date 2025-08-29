@@ -76,6 +76,7 @@ fn test_cli_mode_detection() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     // CLI mode is determined by args.cli_mode
@@ -120,6 +121,7 @@ fn test_main_args_parsing() {
             use_gpu: false,
             force_cpu: true,
             parallel: false,
+            disable_ai: false,
         },
         Args {
             repo_path: ".".to_string(),
@@ -134,6 +136,7 @@ fn test_main_args_parsing() {
             use_gpu: true,
             force_cpu: false,
             parallel: false,
+            disable_ai: false,
         },
     ];
 
@@ -187,6 +190,7 @@ fn test_app_initialization_state() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     assert!(!args.repo_path.is_empty());

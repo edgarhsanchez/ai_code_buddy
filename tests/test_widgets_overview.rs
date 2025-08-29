@@ -35,6 +35,7 @@ fn test_initialize_overview_state() {
             force_cpu: false,
 
             parallel: false,
+            disable_ai: false,
         });
 
     // Add the system
@@ -72,6 +73,7 @@ fn test_overview_keyboard_navigation() {
             force_cpu: false,
 
             parallel: false,
+            disable_ai: false,
         });
 
     // Set initial state

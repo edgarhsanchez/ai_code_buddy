@@ -26,6 +26,7 @@ fn test_args_construction() {
         use_gpu: true,
         force_cpu: false,
         parallel: false,
+        disable_ai: false,
     };
 
     assert_eq!(args.repo_path, "/test/path");
@@ -55,6 +56,7 @@ fn test_args_defaults() {
         use_gpu: false,
         force_cpu: true,
         parallel: false,
+        disable_ai: false,
     };
 
     assert_eq!(args.repo_path, ".");
@@ -96,6 +98,7 @@ fn test_args_patterns() {
         use_gpu: false,
         force_cpu: true,
         parallel: false,
+        disable_ai: false,
     };
 
     assert_eq!(args.exclude_patterns.len(), 2);

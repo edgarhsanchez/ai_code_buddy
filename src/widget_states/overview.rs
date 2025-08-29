@@ -6,6 +6,7 @@ use std::collections::HashMap;
 pub enum OverviewComponent {
     StartAnalysis,
     ViewReports,
+    Settings,
     Credits,
     Help,
     Exit,
@@ -68,7 +69,8 @@ impl OverviewWidgetState {
         self.selected_component = match direction {
             SelectionDirection::Next => match self.selected_component {
                 OverviewComponent::StartAnalysis => OverviewComponent::ViewReports,
-                OverviewComponent::ViewReports => OverviewComponent::Credits,
+                OverviewComponent::ViewReports => OverviewComponent::Settings,
+                OverviewComponent::Settings => OverviewComponent::Credits,
                 OverviewComponent::Credits => OverviewComponent::Help,
                 OverviewComponent::Help => OverviewComponent::Exit,
                 OverviewComponent::Exit => OverviewComponent::StartAnalysis,
@@ -76,7 +78,8 @@ impl OverviewWidgetState {
             SelectionDirection::Previous => match self.selected_component {
                 OverviewComponent::StartAnalysis => OverviewComponent::Exit,
                 OverviewComponent::ViewReports => OverviewComponent::StartAnalysis,
-                OverviewComponent::Credits => OverviewComponent::ViewReports,
+                OverviewComponent::Settings => OverviewComponent::ViewReports,
+                OverviewComponent::Credits => OverviewComponent::Settings,
                 OverviewComponent::Help => OverviewComponent::Credits,
                 OverviewComponent::Exit => OverviewComponent::Help,
             },

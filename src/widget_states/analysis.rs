@@ -30,6 +30,7 @@ impl AnalysisWidgetState {
         self.review = None;
     }
 
+    #[allow(dead_code)]
     pub fn update_progress(&mut self, progress: f64, current_file: String) {
         self.progress = progress;
         self.current_file = current_file;

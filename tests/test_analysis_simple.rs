@@ -56,6 +56,7 @@ fn test_perform_analysis_basic() -> Result<()> {
         force_cpu: true,
         cli_mode: true,
         show_credits: false,
+        parallel: false,
     };
 
     let result = perform_analysis(&args);
@@ -78,6 +79,7 @@ fn test_perform_analysis_invalid_repository() {
         force_cpu: true,
         cli_mode: true,
         show_credits: false,
+        parallel: false,
     };
 
     let result = perform_analysis(&args);

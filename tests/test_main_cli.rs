@@ -19,6 +19,7 @@ fn test_run_cli_mode_with_credits() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: false,
+        parallel: false,
     };
 
     let result = run_cli_mode(args);
@@ -43,6 +44,7 @@ fn test_run_cli_mode_basic_functionality() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: false,
+        parallel: false,
     };
 
     // This should work even with an empty/non-git directory
@@ -76,6 +78,7 @@ fn test_run_cli_mode_different_output_formats() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+            parallel: false,
         };
 
         let result = run_cli_mode(args);
@@ -101,6 +104,7 @@ fn test_run_cli_mode_with_patterns() {
         include_patterns: vec!["*.rs".to_string(), "*.toml".to_string()],
         use_gpu: false,
         force_cpu: false,
+        parallel: false,
     };
 
     let result = run_cli_mode(args);
@@ -125,6 +129,7 @@ fn test_run_cli_mode_verbose_mode() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: false,
+        parallel: false,
     };
 
     let result = run_cli_mode(args);
@@ -150,6 +155,7 @@ fn test_run_cli_mode_gpu_flags() {
         include_patterns: vec![],
         use_gpu: true,
         force_cpu: false,
+        parallel: false,
     };
 
     let result_gpu = run_cli_mode(args_gpu);
@@ -168,6 +174,7 @@ fn test_run_cli_mode_gpu_flags() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
+        parallel: false,
     };
 
     let result_cpu = run_cli_mode(args_cpu);
@@ -199,6 +206,7 @@ fn test_args_parsing_for_cli_mode() {
         include_patterns: vec!["src/".to_string()],
         use_gpu: true,
         force_cpu: false,
+        parallel: false,
     };
 
     assert_eq!(args.repo_path, "/test/path");
@@ -229,6 +237,7 @@ fn test_run_cli_mode_error_handling() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: false,
+        parallel: false,
     };
 
     let result = run_cli_mode(args);
@@ -253,6 +262,7 @@ fn test_run_cli_mode_different_branches() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: false,
+        parallel: false,
     };
 
     let result = run_cli_mode(args);

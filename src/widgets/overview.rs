@@ -136,6 +136,10 @@ fn handle_selection(component: &OverviewComponent, app_events: &mut EventWriter<
         OverviewComponent::ViewReports => {
             app_events.send(AppEvent::SwitchTo(AppState::Reports));
         }
+        OverviewComponent::Settings => {
+            // Settings functionality - for now we'll add this as a placeholder
+            // In a real implementation, this might open a settings dialog
+        }
         OverviewComponent::Credits => {
             app_events.send(AppEvent::SwitchTo(AppState::Credits));
         }
@@ -295,6 +299,14 @@ impl OverviewWidget {
 
         self.render_menu_button(
             items_layout[4],
+            buf,
+            state,
+            OverviewComponent::Settings,
+            "⚙️  Settings",
+        );
+
+        self.render_menu_button(
+            items_layout[6],
             buf,
             state,
             OverviewComponent::Credits,

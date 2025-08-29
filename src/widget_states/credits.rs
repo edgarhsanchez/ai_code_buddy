@@ -11,7 +11,9 @@ pub enum CreditsComponent {
 
 #[derive(Debug, Clone, Resource)]
 pub struct CreditsWidgetState {
+    #[allow(dead_code)]
     pub selected_component: CreditsComponent,
+    #[allow(dead_code)]
     pub hovered_component: Option<CreditsComponent>,
     pub registered_components: HashMap<CreditsComponent, Rect>,
     pub scroll_offset: usize,

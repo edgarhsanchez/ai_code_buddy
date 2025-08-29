@@ -119,7 +119,8 @@ pub struct Args {
     /// Enable parallel file analysis using Rayon
     #[arg(
         long = "parallel",
-        help = "Enable parallel file analysis using all available CPU cores"
+        help = "Enable parallel file analysis using all available CPU cores",
+        default_value = "true"
     )]
     pub parallel: bool,
 }

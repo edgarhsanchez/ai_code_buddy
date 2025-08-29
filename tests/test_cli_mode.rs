@@ -15,6 +15,7 @@ fn test_run_cli_mode_credits_and_formats() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
+        parallel: false,
     };
     assert!(core::run_cli_mode(args).is_ok());
 
@@ -37,6 +38,7 @@ fn test_run_cli_mode_credits_and_formats() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: true,
+            parallel: false,
         };
         // run_cli_mode returns a boxed error; accept either success or error, but it must not panic
         let _ = core::run_cli_mode(args);

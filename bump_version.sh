@@ -266,6 +266,88 @@ EOF
     echo "✅ Generated credits.rs with current contributors and dependencies"
 }
 
+# Function to run code quality checks
+run_quality_checks() {
+    echo "🔍 Running code quality checks..."
+
+    # Check if we're in a Rust project
+    if [ ! -f "Cargo.toml" ]; then
+        echo "❌ Error: Cargo.toml not found. This doesn't appear to be a Rust project."
+        exit 1
+    fi
+
+    # Check if cargo is available
+    if ! command -v cargo &> /dev/null; then
+        echo "❌ Error: cargo command not found. Please install Rust."
+        exit 1
+    fi
+
+    echo "📦 Checking Cargo.toml format..."
+    if command -v cargo-toml-fmt &> /dev/null; then
+        if ! cargo tomlfmt --check Cargo.toml; then
+            echo "❌ Cargo.toml formatting issues found. Run 'cargo tomlfmt Cargo.toml' to fix."
+            exit 1
+        fi
+    else
+        echo "   cargo-toml-fmt not installed, skipping Cargo.toml format check."
+        echo "   Install with: cargo install cargo-toml-fmt"
+    fi
+
+    echo "🧹 Running cargo fmt check..."
+    if ! cargo fmt --check; then
+        echo "❌ Code formatting issues found. Run 'cargo fmt' to fix."
+        exit 1
+    fi
+
+    echo "🔍 Running cargo clippy..."
+    if ! cargo clippy -- -D warnings; then
+        echo "❌ Clippy warnings found. Please fix them before proceeding."
+        exit 1
+    fi
+
+    echo "✅ Running cargo check..."
+    if ! cargo check; then
+        echo "❌ Compilation errors found. Please fix them before proceeding."
+        exit 1
+    fi
+
+    echo "🧪 Running tests..."
+    if ! cargo test; then
+        echo "❌ Tests failed. Please fix them before proceeding."
+        exit 1
+    fi
+
+    echo "📊 Running cargo audit (if available)..."
+    if command -v cargo-audit &> /dev/null; then
+        if ! cargo audit; then
+            echo "⚠️  Security vulnerabilities found. Please review and fix."
+            echo "   You can run 'cargo audit fix' to attempt automatic fixes."
+            echo "   Continuing with version bump despite vulnerabilities..."
+        fi
+    else
+        echo "   cargo-audit not installed, skipping security audit."
+        echo "   Install with: cargo install cargo-audit"
+    fi
+
+    echo "📏 Checking for large files..."
+    # Check for files larger than 10MB
+    LARGE_FILES=$(find . -type f -size +10M -not -path "./target/*" -not -path "./.git/*" 2>/dev/null)
+    if [ -n "$LARGE_FILES" ]; then
+        echo "⚠️  Large files found (>10MB):"
+        echo "$LARGE_FILES"
+        echo "   Consider adding them to .gitignore or using git-lfs."
+    fi
+
+    echo "🔍 Checking for TODO/FIXME comments..."
+    TODO_COUNT=$(grep -r "TODO\|FIXME\|XXX\|HACK" --include="*.rs" --exclude-dir=target --exclude-dir=.git . 2>/dev/null | wc -l)
+    if [ "$TODO_COUNT" -gt 0 ]; then
+        echo "📝 Found $TODO_COUNT TODO/FIXME comments in the codebase."
+        echo "   Consider addressing them before release."
+    fi
+
+    echo "✅ All quality checks passed!"
+}
+
 # Check for dry-run flag
 DRY_RUN=false
 if [ "$1" = "--dry-run" ]; then
@@ -298,6 +380,11 @@ else
 fi
 
 BRANCH_NAME="bump-version-$NEW_VERSION"
+
+# Run quality checks before proceeding
+echo "🔍 Running pre-release quality checks..."
+run_quality_checks
+echo ""
 
 # Generate updated credits.rs before updating version
 generate_credits

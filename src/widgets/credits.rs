@@ -143,10 +143,7 @@ pub fn render_credits(
 }
 
 fn generate_credits_content(state: &mut CreditsWidgetState) -> Paragraph {
-    let mut lines = Vec::new();
-
-    // Project Information
-    lines.push(Line::from(""));
+    let mut lines = vec![Line::from("")];
     lines.push(Line::from(vec![Span::styled(
         "📚 About AI Code Buddy",
         Style::default().add_modifier(Modifier::BOLD),
@@ -203,7 +200,7 @@ fn generate_credits_content(state: &mut CreditsWidgetState) -> Paragraph {
         lines.push(Line::from("   👥 Key Contributors:"));
 
         for contributor in &library.contributors {
-            lines.push(Line::from(format!("     • {}", contributor)));
+            lines.push(Line::from(format!("     • {contributor}")));
         }
         lines.push(Line::from(""));
     }

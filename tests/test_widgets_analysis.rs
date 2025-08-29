@@ -333,6 +333,8 @@ fn test_analysis_event_handler_escape_key() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+
+            parallel: false,
         })
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 
@@ -392,9 +394,9 @@ fn test_analysis_event_handler_enter_key_start_analysis() {
         .add_event::<bevy::app::AppExit>()
         .init_resource::<AnalysisWidgetState>()
         .insert_resource(Args {
-            repo_path: "/test/repo".to_string(),
+            repo_path: ".".to_string(),
             source_branch: "main".to_string(),
-            target_branch: "feature".to_string(),
+            target_branch: "HEAD".to_string(),
             cli_mode: false,
             verbose: false,
             show_credits: false,
@@ -403,6 +405,8 @@ fn test_analysis_event_handler_enter_key_start_analysis() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+
+            parallel: false,
         })
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 
@@ -434,9 +438,11 @@ fn test_analysis_event_handler_enter_key_start_analysis() {
 
     app.update();
 
-    // Check that analysis was started
+    // Check that analysis completed successfully
     let analysis_state = app.world().get_resource::<AnalysisWidgetState>().unwrap();
-    assert!(analysis_state.is_analyzing);
+    assert!(!analysis_state.is_analyzing); // Analysis should be complete
+    assert!(analysis_state.review.is_some()); // Should have review data
+    assert_eq!(analysis_state.progress, 100.0); // Should be 100% complete
 }
 
 #[test]
@@ -461,6 +467,8 @@ fn test_analysis_event_handler_navigation_keys() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+
+            parallel: false,
         })
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 
@@ -547,6 +555,8 @@ fn test_analysis_event_handler_reports_key() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+
+            parallel: false,
         })
         .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default());
 

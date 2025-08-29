@@ -3,7 +3,8 @@ use ai_code_buddy::{
     args::{Args, OutputFormat},
     bevy_states::app::AppState,
     events::{
-        analysis::AnalysisEvent, app::AppEvent, overview::OverviewEvent, reports::ReportsEvent,
+        analysis::AnalysisEvent, app::AppEvent, credits::CreditsEvent, overview::OverviewEvent,
+        reports::ReportsEvent,
     },
     initialize_app, keyboard_events_handler, mouse_events_handler,
 };
@@ -20,6 +21,7 @@ fn build_app_with_state() -> App {
         .add_event::<OverviewEvent>()
         .add_event::<AnalysisEvent>()
         .add_event::<ReportsEvent>()
+        .add_event::<CreditsEvent>()
         .init_state::<AppState>()
         .insert_resource(Args {
             repo_path: ".".to_string(),
@@ -33,6 +35,7 @@ fn build_app_with_state() -> App {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: true,
+            parallel: false,
         });
     app
 }
@@ -304,6 +307,10 @@ fn test_mouse_events_different_states() {
                 let cursor = reports_bus.get_cursor();
                 assert!(cursor.len(reports_bus) > 0);
             }
+            AppState::Credits => {
+                // Credits state doesn't have a specific event bus in this test
+                // The test would need to be updated if credits events are added
+            }
         }
     }
 }
@@ -323,6 +330,7 @@ fn test_initialize_app_with_different_args() {
         include_patterns: vec!["*.rs".to_string()],
         use_gpu: true,
         force_cpu: false,
+        parallel: false,
     };
 
     app.add_plugins(StatesPlugin)

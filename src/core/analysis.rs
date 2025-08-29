@@ -224,7 +224,7 @@ async fn perform_parallel_analysis(
                     Ok(issues)
                 }
                 Err(e) => {
-                    eprintln!("⚠️  Failed to analyze {}: {}", file_path, e);
+                    eprintln!("⚠️  Failed to analyze {file_path}: {e}");
                     Err(e)
                 }
             }
@@ -248,7 +248,7 @@ async fn perform_parallel_analysis(
                 }
             }
             Err(e) => {
-                eprintln!("⚠️  Analysis failed: {}", e);
+                eprintln!("⚠️  Analysis failed: {e}");
             }
         }
     }
@@ -342,6 +342,7 @@ mod tests {
             exclude_patterns: exclude.into_iter().map(|s| s.to_string()).collect(),
             use_gpu: false,
             force_cpu: true,
+            parallel: false,
         }
     }
 

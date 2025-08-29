@@ -97,6 +97,7 @@ fn test_perform_analysis_with_progress_covers_paths() {
         include_patterns: vec!["*.rs".to_string()], // ensure we include our files
         use_gpu: false,
         force_cpu: true,
+        parallel: false,
     };
 
     // Capture progress updates

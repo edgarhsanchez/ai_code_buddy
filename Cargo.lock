@@ -60,7 +60,7 @@ dependencies = [
 
 [[package]]
 name = "ai-code-buddy"
-version = "0.4.18"
+version = "0.4.19"
 dependencies = [
  "anyhow",
  "bevy",

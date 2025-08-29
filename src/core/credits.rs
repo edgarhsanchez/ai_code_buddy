@@ -23,7 +23,7 @@ pub fn get_project_contributors() -> Vec<Contributor> {
         Contributor {
             name: "Edgar Sanchez",
             email: "esanchez@m2iab.com",
-            contributions: 92,
+            contributions: 93,
         },
         Contributor {
             name: "Edgar H Sanchez",

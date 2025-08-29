@@ -20,12 +20,14 @@ compile_error!(
 
 pub mod widgets {
     pub mod analysis;
+    pub mod credits;
     pub mod overview;
     pub mod reports;
 }
 
 pub mod widget_states {
     pub mod analysis;
+    pub mod credits;
     pub mod overview;
     pub mod reports;
 }
@@ -33,6 +35,7 @@ pub mod widget_states {
 pub mod events {
     pub mod analysis;
     pub mod app;
+    pub mod credits;
     pub mod overview;
     pub mod reports;
 }
@@ -88,6 +91,7 @@ mod main_functions {
         mut overview_events: EventWriter<crate::events::overview::OverviewEvent>,
         mut analysis_events: EventWriter<crate::events::analysis::AnalysisEvent>,
         mut reports_events: EventWriter<crate::events::reports::ReportsEvent>,
+        mut credits_events: EventWriter<crate::events::credits::CreditsEvent>,
         mut app_events: EventWriter<AppEvent>,
     ) {
         let app_state = app_state.get();
@@ -117,6 +121,11 @@ mod main_functions {
                         event.clone(),
                     ));
                 }
+                AppState::Credits => {
+                    credits_events.send(crate::events::credits::CreditsEvent::KeyEvent(
+                        event.clone(),
+                    ));
+                }
             }
         }
     }
@@ -127,6 +136,7 @@ mod main_functions {
         mut overview_events: EventWriter<crate::events::overview::OverviewEvent>,
         mut analysis_events: EventWriter<crate::events::analysis::AnalysisEvent>,
         mut reports_events: EventWriter<crate::events::reports::ReportsEvent>,
+        mut credits_events: EventWriter<crate::events::credits::CreditsEvent>,
     ) {
         let app_state = app_state.get();
 
@@ -142,6 +152,9 @@ mod main_functions {
                 }
                 AppState::Reports => {
                     reports_events.send(crate::events::reports::ReportsEvent::MouseEvent(*event));
+                }
+                AppState::Credits => {
+                    credits_events.send(crate::events::credits::CreditsEvent::MouseEvent(*event));
                 }
             }
         }

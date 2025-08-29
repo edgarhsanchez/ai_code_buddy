@@ -66,6 +66,9 @@ fn test_move_selection_next() {
     assert_eq!(state.selected_component, OverviewComponent::Settings);
 
     state.move_selection(SelectionDirection::Next);
+    assert_eq!(state.selected_component, OverviewComponent::Credits);
+
+    state.move_selection(SelectionDirection::Next);
     assert_eq!(state.selected_component, OverviewComponent::Help);
 
     state.move_selection(SelectionDirection::Next);
@@ -88,6 +91,9 @@ fn test_move_selection_previous() {
 
     state.move_selection(SelectionDirection::Previous);
     assert_eq!(state.selected_component, OverviewComponent::Help);
+
+    state.move_selection(SelectionDirection::Previous);
+    assert_eq!(state.selected_component, OverviewComponent::Credits);
 
     state.move_selection(SelectionDirection::Previous);
     assert_eq!(state.selected_component, OverviewComponent::Settings);
@@ -250,6 +256,7 @@ fn test_comprehensive_selection_workflow() {
         OverviewComponent::StartAnalysis,
         OverviewComponent::ViewReports,
         OverviewComponent::Settings,
+        OverviewComponent::Credits,
         OverviewComponent::Help,
         OverviewComponent::Exit,
     ];

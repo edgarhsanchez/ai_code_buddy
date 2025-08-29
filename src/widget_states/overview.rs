@@ -7,6 +7,7 @@ pub enum OverviewComponent {
     StartAnalysis,
     ViewReports,
     Settings,
+    Credits,
     Help,
     Exit,
 }
@@ -69,7 +70,8 @@ impl OverviewWidgetState {
             SelectionDirection::Next => match self.selected_component {
                 OverviewComponent::StartAnalysis => OverviewComponent::ViewReports,
                 OverviewComponent::ViewReports => OverviewComponent::Settings,
-                OverviewComponent::Settings => OverviewComponent::Help,
+                OverviewComponent::Settings => OverviewComponent::Credits,
+                OverviewComponent::Credits => OverviewComponent::Help,
                 OverviewComponent::Help => OverviewComponent::Exit,
                 OverviewComponent::Exit => OverviewComponent::StartAnalysis,
             },
@@ -77,7 +79,8 @@ impl OverviewWidgetState {
                 OverviewComponent::StartAnalysis => OverviewComponent::Exit,
                 OverviewComponent::ViewReports => OverviewComponent::StartAnalysis,
                 OverviewComponent::Settings => OverviewComponent::ViewReports,
-                OverviewComponent::Help => OverviewComponent::Settings,
+                OverviewComponent::Credits => OverviewComponent::Settings,
+                OverviewComponent::Help => OverviewComponent::Credits,
                 OverviewComponent::Exit => OverviewComponent::Help,
             },
         }

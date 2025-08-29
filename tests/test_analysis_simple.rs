@@ -57,6 +57,7 @@ fn test_perform_analysis_basic() -> Result<()> {
         disable_ai: false,
         cli_mode: true,
         show_credits: false,
+        parallel: false,
     };
 
     let result = perform_analysis(&args);
@@ -80,6 +81,7 @@ fn test_perform_analysis_invalid_repository() {
         disable_ai: false,
         cli_mode: true,
         show_credits: false,
+        parallel: false,
     };
 
     let result = perform_analysis(&args);

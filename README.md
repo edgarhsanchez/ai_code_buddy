@@ -20,7 +20,7 @@
 - 🖥️ **CLI Mode**: Traditional command-line interface for scripts and CI/CD integration
 - 📋 **Multiple Output Formats**: Summary, detailed, JSON, and Markdown output formats
 - 🎨 **File Filtering**: Include/exclude files using glob patterns
-- 👥 **Credits System**: Track and display all project contributors
+- 👥 **Credits System**: Interactive credits display with comprehensive contributor and library information
 - 🔧 **Professional CLI**: Complete argument parsing with help and validation
 
 ## Screenshots
@@ -289,6 +289,9 @@ ai-code-buddy --cli --format markdown > code-review.md
 
 # CI/CD integration test
 ai-code-buddy --cli --format json > review.json
+
+# View comprehensive credits and acknowledgments
+ai-code-buddy --cli --credits
 ```
 
 ## Command Line Interface
@@ -393,6 +396,7 @@ ai-code-buddy
 - **Tab/Shift+Tab**: Switch between Overview, Analysis, and Reports tabs
 - **↑/↓ Arrow Keys**: Navigate through issues and files
 - **Enter**: View detailed issue information and recommendations
+- **C**: View comprehensive credits and acknowledgments
 - **R**: Generate and export comprehensive reports
 - **Q/Ctrl+C**: Quit application gracefully
 - **Space**: Toggle issue selection for bulk operations
@@ -401,6 +405,7 @@ ai-code-buddy
 **📊 TUI Features:**
 - **Real-time analysis progress** with file-by-file updates
 - **Interactive issue browsing** with syntax highlighting
+- **Comprehensive credits display** with scrollable contributor and library information
 - **Multiple export formats** (Summary, Detailed, JSON, Markdown)
 - **GPU acceleration status** and performance metrics
 - **Beautiful dark theme** optimized for long analysis sessions
@@ -441,6 +446,41 @@ ai-code-buddy --cli --exclude "target/**" --exclude "node_modules/**" --exclude 
 
 # Algorithm analysis
 ai-code-buddy --cli --include "**/*algorithm*" --include "**/*performance*" --verbose
+```
+
+#### 🎉 Credits & Acknowledgments
+```bash
+# View comprehensive project credits and contributors
+ai-code-buddy --cli --credits
+```
+
+**Credits Output:**
+```
+🎉 AI Code Buddy - Comprehensive Credits & Acknowledgments
+==========================================================
+
+📚 About AI Code Buddy:
+An intelligent code analysis tool with elegant Bevy-powered TUI
+that provides comprehensive code reviews with AI assistance.
+
+👥 Project Contributors:
+  • Edgar Sanchez <esanchez@m2iab.com> (76 commits)
+  • Edgar H Sanchez <esanchez@m2iab.com> (14 commits)
+
+📦 Library Dependencies & Licenses:
+🔧 anyhow v1.0.95
+   📄 License: MIT OR Apache-2.0
+   📖 Description: Flexible concrete Error type built on std::error::Error
+   🔗 Repository: https://github.com/dtolnay/anyhow
+   👥 Key Contributors: David Tolnay, And 50+ contributors
+
+[... additional libraries ...]
+
+🙏 Special Thanks:
+  • The Rust Programming Language team
+  • All open source contributors
+  • The Bevy game engine community
+  • The broader Rust ecosystem
 ```
 
 ### 🏭 Production Use Cases

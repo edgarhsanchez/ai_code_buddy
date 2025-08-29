@@ -161,7 +161,7 @@ impl AIAnalyzer {
         Ok(issues)
     }
 
-    fn rule_based_analysis(&self, request: &AnalysisRequest) -> Result<Vec<Issue>> {
+    pub fn rule_based_analysis(&self, request: &AnalysisRequest) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
 
         for (line_num, line) in request.content.lines().enumerate() {

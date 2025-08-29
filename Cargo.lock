@@ -60,7 +60,7 @@ dependencies = [
 
 [[package]]
 name = "ai-code-buddy"
-version = "0.4.10"
+version = "0.4.20"
 dependencies = [
  "anyhow",
  "bevy",
@@ -74,12 +74,14 @@ dependencies = [
  "insta",
  "kalosm",
  "mockall",
+ "num_cpus",
  "pretty_assertions",
  "proptest",
  "rat-cursor",
  "rat-event",
  "rat-focus",
  "ratatui",
+ "rayon",
  "regex",
  "rstest",
  "serde",

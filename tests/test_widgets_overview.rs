@@ -33,6 +33,8 @@ fn test_initialize_overview_state() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+
+            parallel: false,
             disable_ai: false,
         });
 
@@ -69,6 +71,8 @@ fn test_overview_keyboard_navigation() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+
+            parallel: false,
             disable_ai: false,
         });
 

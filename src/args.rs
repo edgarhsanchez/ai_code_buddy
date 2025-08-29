@@ -116,6 +116,14 @@ pub struct Args {
     )]
     pub force_cpu: bool,
 
+    /// Enable parallel file analysis using Rayon
+    #[arg(
+        long = "parallel",
+        help = "Enable parallel file analysis using all available CPU cores",
+        default_value = "true"
+    )]
+    pub parallel: bool,
+
     /// Disable AI inference (experimental)
     #[arg(
         long = "disable-ai",

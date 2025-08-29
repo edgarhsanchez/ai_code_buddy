@@ -1,5 +1,6 @@
 pub mod ai_analyzer;
 pub mod analysis;
+pub mod credits;
 pub mod git;
 pub mod review;
 
@@ -37,21 +38,7 @@ pub fn run_cli_mode(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn show_credits() {
-    println!("🎉 AI Code Buddy v{APP_VERSION} - Credits & Contributors");
-    println!("==========================================");
-    println!();
-    println!("📚 About AI Code Buddy:");
-    println!("An intelligent code analysis tool with elegant Bevy-powered TUI");
-    println!("that provides comprehensive code reviews with AI assistance.");
-    println!();
-    println!("🔧 Built with:");
-    println!("  • Rust 🦀 - Systems programming language");
-    println!("  • Bevy - Data-driven game engine for TUI");
-    println!("  • Ratatui - Terminal UI library");
-    println!("  • Git2 - Git repository analysis");
-    println!("  • Kalosm - AI/ML framework");
-    println!();
-    println!("💡 Want to contribute? Visit: https://github.com/edgarhsanchez/ai_code_buddy");
+    credits::display_comprehensive_credits();
 }
 
 fn print_summary(review: &review::Review) {

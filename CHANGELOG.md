@@ -8,22 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **AI-Powered Analysis Toggle**: New `--disable-ai` flag for controlling AI-enhanced analysis
-- **Enhanced Analysis Engine**: AI-enhanced analysis with contextual understanding and deeper pattern detection
-- **Architecture Analysis**: Detection of God classes, complex methods, and structural anti-patterns
-- **Concurrency Analysis**: Race condition detection in multi-threaded code
-- **Error Handling Assessment**: Consistency analysis of error handling patterns across the codebase
-- **Performance Optimization**: Context-aware performance suggestions beyond basic pattern matching
-- **Complexity Scoring**: Maintainability metrics with refactoring recommendations
+- **Interactive Credits Display**: Replaced settings menu with comprehensive credits screen in TUI mode
+- **Scrollable Credits Interface**: Full credits display with keyboard and mouse navigation (↑/↓, Page Up/Down, Home/End, mouse wheel)
+- **Dynamic Credits Generation**: Automatically generated credits from git history and Cargo.toml dependencies
+- **Comprehensive Library Attribution**: Complete list of all dependencies with licenses, descriptions, and contributors
+- **Professional Credits Layout**: Clean, organized display with project contributors and library acknowledgments
+- **Parallel File Analysis**: High-performance parallel processing using Rayon with automatic CPU core detection
+- **CLI Parallel Flag**: New `--parallel` option for concurrent file analysis across all available CPU cores
+- **Performance Optimization**: Multi-threaded analysis engine for large codebases with significant speedup improvements
 
 ### Enhanced
-- **Analysis Pipeline**: Conditional analysis with AI-enhanced mode (default) vs rule-based mode
-- **User Experience**: Clear visual indicators showing which analysis mode is active
-- **Documentation**: Comprehensive README updates with AI analysis usage examples and performance comparisons
+- **UI Navigation**: Updated main menu to replace "Settings" with "Credits" option
+- **Event Handling**: Added credits state management and event routing for seamless UI transitions
+- **User Experience**: Improved navigation with dedicated credits screen instead of basic settings
+- **Analysis Performance**: Parallel processing capability with intelligent thread management and resource optimization
+- **Thread Safety**: Resolved GitAnalyzer Send issues for proper concurrent execution
+- **Credits Screen**: Fixed mouse and keyboard event handling with proper state isolation
+- **Plugin Architecture**: Improved state conditions for credits plugin to prevent UI interference
 
-### Changed
-- **Default Behavior**: AI analysis is now enabled by default for maximum code insights
-- **CLI Interface**: Updated flag from `--enable-ai` to `--disable-ai` for better UX (opt-out vs opt-in)
+### Fixed
+- **Credits Screen Events**: Fixed mouse event routing and keyboard navigation in credits screen
+- **State Management**: Resolved plugin state conditions to prevent rendering conflicts between screens
+- **Thread Safety**: Fixed GitAnalyzer Send trait issues for proper background task execution
+- **TUI Synchronization**: Corrected analysis widget to use synchronous processing for UI compatibility
+
+### Performance
+- **Parallel Processing**: Up to 14x faster analysis on multi-core systems (automatic CPU core detection)
+- **Resource Utilization**: Optimal thread pool management with Rayon's work-stealing scheduler
+- **Memory Efficiency**: Reduced memory footprint through parallel data processing patterns
 
 ## [0.3.0] - 2025-08-26
 

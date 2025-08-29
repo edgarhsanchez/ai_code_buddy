@@ -26,6 +26,7 @@ fn test_initialize_app() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: false,
+        parallel: false,
         disable_ai: false,
     };
 
@@ -202,6 +203,7 @@ fn test_initialize_app_with_different_args() {
             include_patterns: vec!["src/**".to_string()],
             use_gpu: true,
             force_cpu: false,
+            parallel: false,
             disable_ai: false,
         },
         Args {
@@ -216,6 +218,7 @@ fn test_initialize_app_with_different_args() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: true,
+            parallel: false,
             disable_ai: false,
         },
     ];
@@ -290,6 +293,7 @@ fn test_event_system_setup() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: false,
+        parallel: false,
         disable_ai: false,
     };
 

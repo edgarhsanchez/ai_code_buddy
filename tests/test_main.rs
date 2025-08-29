@@ -75,6 +75,7 @@ fn test_cli_mode_detection() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: false,
+        parallel: false,
         disable_ai: false,
     };
 
@@ -119,6 +120,7 @@ fn test_main_args_parsing() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: true,
+            parallel: false,
             disable_ai: false,
         },
         Args {
@@ -133,6 +135,7 @@ fn test_main_args_parsing() {
             include_patterns: vec![],
             use_gpu: true,
             force_cpu: false,
+            parallel: false,
             disable_ai: false,
         },
     ];
@@ -186,6 +189,7 @@ fn test_app_initialization_state() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: false,
+        parallel: false,
         disable_ai: false,
     };
 

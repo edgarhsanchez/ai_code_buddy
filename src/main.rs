@@ -1,11 +1,13 @@
 mod widgets {
     pub mod analysis;
+    pub mod credits;
     pub mod overview;
     pub mod reports;
 }
 
 mod widget_states {
     pub mod analysis;
+    pub mod credits;
     pub mod overview;
     pub mod reports;
 }
@@ -13,6 +15,7 @@ mod widget_states {
 mod events {
     pub mod analysis;
     pub mod app;
+    pub mod credits;
     pub mod overview;
     pub mod reports;
 }
@@ -31,7 +34,10 @@ use std::{error::Error, io::stdout, time::Duration};
 use bevy_states::app::AppState;
 use clap::Parser;
 use events::app::AppEvent;
-use widgets::{analysis::AnalysisPlugin, overview::OverviewPlugin, reports::ReportsPlugin};
+use widgets::{
+    analysis::AnalysisPlugin, credits::CreditsPlugin, overview::OverviewPlugin,
+    reports::ReportsPlugin,
+};
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*, state::app::StatesPlugin};
 use bevy_ratatui::{
@@ -76,6 +82,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .add_plugins(OverviewPlugin)
         .add_plugins(AnalysisPlugin)
         .add_plugins(ReportsPlugin)
+        .add_plugins(CreditsPlugin)
         .add_systems(Startup, initialize_app)
         .add_systems(PreUpdate, keyboard_events_handler)
         .add_systems(PreUpdate, mouse_events_handler)
@@ -134,6 +141,7 @@ pub fn keyboard_events_handler(
     mut overview_events: EventWriter<events::overview::OverviewEvent>,
     mut analysis_events: EventWriter<events::analysis::AnalysisEvent>,
     mut reports_events: EventWriter<events::reports::ReportsEvent>,
+    mut credits_events: EventWriter<events::credits::CreditsEvent>,
     mut app_events: EventWriter<AppEvent>,
 ) {
     let app_state = app_state.get();
@@ -157,6 +165,9 @@ pub fn keyboard_events_handler(
             AppState::Reports => {
                 reports_events.send(events::reports::ReportsEvent::KeyEvent(event.clone()));
             }
+            AppState::Credits => {
+                credits_events.send(events::credits::CreditsEvent::KeyEvent(event.clone()));
+            }
         }
     }
 }
@@ -169,6 +180,7 @@ pub fn mouse_events_handler(
     mut overview_events: EventWriter<events::overview::OverviewEvent>,
     mut analysis_events: EventWriter<events::analysis::AnalysisEvent>,
     mut reports_events: EventWriter<events::reports::ReportsEvent>,
+    mut credits_events: EventWriter<events::credits::CreditsEvent>,
 ) {
     let app_state = app_state.get();
 
@@ -182,6 +194,9 @@ pub fn mouse_events_handler(
             }
             AppState::Reports => {
                 reports_events.send(events::reports::ReportsEvent::MouseEvent(*event));
+            }
+            AppState::Credits => {
+                credits_events.send(events::credits::CreditsEvent::MouseEvent(*event));
             }
         }
     }

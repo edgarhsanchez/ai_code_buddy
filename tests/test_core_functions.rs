@@ -18,6 +18,7 @@ mod tests {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: true,
+            parallel: false,
             disable_ai: false,
         }
     }
@@ -65,6 +66,7 @@ mod tests {
             include_patterns: vec!["*.rs".to_string(), "*.toml".to_string()],
             use_gpu: false,
             force_cpu: true,
+            parallel: false,
             disable_ai: false,
         };
 

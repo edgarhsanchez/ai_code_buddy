@@ -23,6 +23,7 @@ fn test_args_construction() {
         include_patterns: vec!["*.rs".to_string()],
         use_gpu: true,
         force_cpu: false,
+        parallel: false,
         disable_ai: false,
     };
 
@@ -52,6 +53,7 @@ fn test_args_defaults() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
+        parallel: false,
         disable_ai: false,
     };
 
@@ -93,6 +95,7 @@ fn test_args_patterns() {
         include_patterns: vec!["*.rs".to_string(), "*.toml".to_string()],
         use_gpu: false,
         force_cpu: true,
+        parallel: false,
         disable_ai: false,
     };
 

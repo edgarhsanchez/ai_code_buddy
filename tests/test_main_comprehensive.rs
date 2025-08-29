@@ -31,6 +31,7 @@ fn test_initialize_app_function() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: true,
+            parallel: false,
             disable_ai: false,
         })
         .init_state::<AppState>()
@@ -129,6 +130,7 @@ fn test_main_app_configuration() {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
+        parallel: false,
         disable_ai: false,
     };
 
@@ -174,6 +176,7 @@ fn test_resource_setup() {
         include_patterns: vec!["*.rs".to_string()],
         use_gpu: true,
         force_cpu: false,
+        parallel: false,
         disable_ai: false,
     };
 
@@ -252,6 +255,7 @@ fn test_output_format_variants() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: false,
+            parallel: false,
             disable_ai: false,
         };
 
@@ -275,6 +279,7 @@ fn test_initialize_with_different_configs() {
             include_patterns: vec![],
             use_gpu: false,
             force_cpu: true,
+            parallel: false,
             disable_ai: false,
         },
         Args {
@@ -289,6 +294,7 @@ fn test_initialize_with_different_configs() {
             include_patterns: vec!["src/**".to_string()],
             use_gpu: true,
             force_cpu: false,
+            parallel: false,
             disable_ai: false,
         },
     ];

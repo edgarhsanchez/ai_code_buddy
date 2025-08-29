@@ -18,6 +18,7 @@ fn create_test_args(repo_path: String) -> Args {
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
+        parallel: false,
         disable_ai: false,
     }
 }

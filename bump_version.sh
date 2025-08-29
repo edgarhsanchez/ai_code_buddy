@@ -1,23 +1,447 @@
 #!/bin/bash
 # filepath: /Volumes/U34 Bolt/Documents/github/ai_code_buddy/bump_version.sh
+#
+# Version bump script for ai-code-buddy
+# 
+# Usage:
+#   ./bump_version.sh [VERSION] [FLAGS]
+#   
+# Arguments:
+#   VERSION       Optional. If not provided, auto-increments patch version
+#   
+# Flags:
+#   --dry-run     Preview changes without executing them
+#   --redo        Regenerate credits and repush the current version tag
+#   
+# Examples:
+#   ./bump_version.sh                    # Auto-increment patch version
+#   ./bump_version.sh 1.2.3             # Set specific version
+#   ./bump_version.sh --dry-run          # Preview auto-increment
+#   ./bump_version.sh --redo             # Regenerate credits and repush current tag
+#   ./bump_version.sh 1.2.3 --dry-run   # Preview specific version
 
-# Run clippy to check for warnings before proceeding
-echo "🔍 Running cargo clippy to check for warnings..."
-if ! cargo clippy -- -D warnings; then
-  echo "❌ Clippy found warnings or errors. Please fix them before bumping version."
-  exit 1
-fi
-echo "✅ Clippy check passed!"
+# Function to show help
+show_help() {
+    echo "Version bump script for ai-code-buddy"
+    echo ""
+    echo "Usage: $0 [VERSION] [FLAGS]"
+    echo ""
+    echo "Arguments:"
+    echo "  VERSION       Optional. If not provided, auto-increments patch version"
+    echo ""
+    echo "Flags:"
+    echo "  --dry-run     Preview changes without executing them"
+    echo "  --redo        Regenerate credits and repush the current version tag"
+    echo "  --help        Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0                    # Auto-increment patch version"
+    echo "  $0 1.2.3             # Set specific version"
+    echo "  $0 --dry-run          # Preview auto-increment"
+    echo "  $0 --redo             # Regenerate credits and repush current tag"
+    echo "  $0 1.2.3 --dry-run   # Preview specific version"
+    echo ""
+}
 
-# Check if git working directory is clean
-if ! git diff --quiet || ! git diff --staged --quiet; then
-  echo "❌ Git working directory is not clean. Please commit or stash changes before bumping version."
-  exit 1
-fi
-echo "✅ Git working directory is clean!"
+# Check for help flag
+for arg in "$@"; do
+    if [ "$arg" = "--help" ] || [ "$arg" = "-h" ]; then
+        show_help
+        exit 0
+    fi
+done
 
-# If no version provided, auto-increment patch version
-if [ -z "$1" ]; then
+# Function to generate credits.rs with current contributors and dependencies
+generate_credits() {
+    echo "🔄 Generating credits.rs with current contributors and dependencies..."
+
+    # Get project contributors from git
+    CONTRIBUTORS=$(git log --format='%aN|%aE' | sort | uniq -c | sort -nr | head -10)
+
+    # Parse Cargo.toml for dependencies (both regular and dev dependencies)
+    DEPENDENCIES=$(sed -n "/^\[dependencies\]/,/^\[.*\]/p" Cargo.toml | grep "^[a-zA-Z0-9_-]* = " | sed "s/ = .*$//" | sort)
+    DEV_DEPENDENCIES=$(sed -n "/^\[dev-dependencies\]/,/^\[.*\]/p" Cargo.toml | grep "^[a-zA-Z0-9_-]* = " | sed "s/ = .*$//" | sort)
+    ALL_DEPENDENCIES=$(echo -e "$DEPENDENCIES\n$DEV_DEPENDENCIES" | sort | uniq)
+
+    # Create credits.rs file
+    cat > src/core/credits.rs << 'EOF'
+/// Information about a library dependency
+#[derive(Debug, Clone)]
+pub struct LibraryInfo {
+    pub name: &'static str,
+    pub version: &'static str,
+    pub license: &'static str,
+    pub description: &'static str,
+    pub repository: &'static str,
+    pub contributors: Vec<&'static str>,
+}
+
+/// Project contributor information
+#[derive(Debug, Clone)]
+pub struct Contributor {
+    pub name: &'static str,
+    pub email: &'static str,
+    pub contributions: u32,
+}
+
+/// Get all project contributors from git history
+pub fn get_project_contributors() -> Vec<Contributor> {
+    vec![
+EOF
+
+    # Add contributors from git
+    FIRST=true
+    echo "$CONTRIBUTORS" | while IFS= read -r line; do
+        # Parse contributor info (count name|email)
+        COUNT=$(echo "$line" | awk '{print $1}' | tr -d ' ')
+        NAME_EMAIL=$(echo "$line" | sed 's/^[[:space:]]*[0-9][0-9]*[[:space:]]*//')  # Remove count and spaces
+        NAME=$(echo "$NAME_EMAIL" | cut -d'|' -f1 | sed 's/^ *//;s/ *$//')  # Trim spaces
+        EMAIL=$(echo "$NAME_EMAIL" | cut -d'|' -f2)
+
+        if [ "$FIRST" = true ]; then
+            FIRST=false
+        else
+            echo "," >> src/core/credits.rs
+        fi
+
+        cat >> src/core/credits.rs << EOF
+        Contributor {
+            name: "$NAME",
+            email: "$EMAIL",
+            contributions: $COUNT,
+        }
+EOF
+    done
+
+    cat >> src/core/credits.rs << 'EOF'
+    ]
+}
+
+/// Get all library dependencies with their information
+pub fn get_library_dependencies() -> Vec<LibraryInfo> {
+    vec![
+EOF
+
+    # Add dependencies with license information
+    FIRST=true
+    echo "$ALL_DEPENDENCIES" | while IFS= read -r dep; do
+        if [ -z "$dep" ]; then continue; fi
+
+        # Get version from Cargo.toml
+        DEP_LINE=$(grep "^$dep = " Cargo.toml)
+        if [[ $DEP_LINE == *'"'* ]]; then
+            VERSION=$(echo "$DEP_LINE" | sed 's/.*= "\([^"]*\)".*/\1/')
+        elif [[ $DEP_LINE == *'{'* ]]; then
+            VERSION=$(echo "$DEP_LINE" | sed 's/.*version = "\([^"]*\)".*/\1/')
+        else
+            VERSION="latest"
+        fi
+        if [ -z "$VERSION" ]; then
+            VERSION="latest"
+        fi
+
+        # Get license info for common crates
+        case $dep in
+            "anyhow")
+                LICENSE="MIT OR Apache-2.0"
+                DESC="Flexible concrete Error type built on std::error::Error"
+                REPO="https://github.com/dtolnay/anyhow"
+                CONTRIBUTORS='vec!["David Tolnay", "And 50+ contributors"]'
+                ;;
+            "bevy")
+                LICENSE="MIT OR Apache-2.0"
+                DESC="A refreshingly simple data-driven game engine built in Rust"
+                REPO="https://github.com/bevyengine/bevy"
+                CONTRIBUTORS='vec!["Carter Anderson", "Alice Cecile", "And 300+ contributors"]'
+                ;;
+            "clap")
+                LICENSE="MIT OR Apache-2.0"
+                DESC="A full featured, fast Command Line Argument Parser for Rust"
+                REPO="https://github.com/clap-rs/clap"
+                CONTRIBUTORS='vec!["Kevin K. <kbknapp@gmail.com>", "And 200+ contributors"]'
+                ;;
+            "tokio")
+                LICENSE="MIT"
+                DESC="An event-driven, non-blocking I/O platform for writing async I/O"
+                REPO="https://github.com/tokio-rs/tokio"
+                CONTRIBUTORS='vec!["Carl Lerche", "Sean McArthur", "And 200+ contributors"]'
+                ;;
+            "serde")
+                LICENSE="MIT OR Apache-2.0"
+                DESC="A generic serialization/deserialization framework"
+                REPO="https://github.com/serde-rs/serde"
+                CONTRIBUTORS='vec!["David Tolnay", "And 100+ contributors"]'
+                ;;
+            "regex")
+                LICENSE="MIT OR Apache-2.0"
+                DESC="An implementation of regular expressions for Rust"
+                REPO="https://github.com/rust-lang/regex"
+                CONTRIBUTORS='vec!["Andrew Gallant", "And 50+ contributors"]'
+                ;;
+            "git2")
+                LICENSE="MIT OR Apache-2.0"
+                DESC="Rust bindings to libgit2 for interoperating with git repositories"
+                REPO="https://github.com/rust-lang/git2-rs"
+                CONTRIBUTORS='vec!["Alex Crichton", "And 50+ contributors"]'
+                ;;
+            "ratatui")
+                LICENSE="MIT"
+                DESC="A Rust library to build rich terminal user interfaces"
+                REPO="https://github.com/ratatui/ratatui"
+                CONTRIBUTORS='vec!["Florian Dehau", "Joshka", "And 100+ contributors"]'
+                ;;
+            "uuid")
+                LICENSE="Apache-2.0 OR MIT"
+                DESC="A library to generate and parse UUIDs"
+                REPO="https://github.com/uuid-rs/uuid"
+                CONTRIBUTORS='vec!["Ashley Mannix", "And 50+ contributors"]'
+                ;;
+            "futures")
+                LICENSE="MIT OR Apache-2.0"
+                DESC="An implementation of futures and streams featuring zero allocations"
+                REPO="https://github.com/rust-lang/futures-rs"
+                CONTRIBUTORS='vec!["Alex Crichton", "And 100+ contributors"]'
+                ;;
+            "crossterm")
+                LICENSE="MIT"
+                DESC="Cross-platform terminal manipulation library"
+                REPO="https://github.com/crossterm-rs/crossterm"
+                CONTRIBUTORS='vec!["T. Postma", "And 50+ contributors"]'
+                ;;
+            "kalosm")
+                LICENSE="MIT OR Apache-2.0"
+                DESC="A user-friendly interface for pre-trained large language models"
+                REPO="https://github.com/floneum/kalosm"
+                CONTRIBUTORS='vec!["Evan Almloff", "And 10+ contributors"]'
+                ;;
+            "bevy_ratatui")
+                LICENSE="MIT OR Apache-2.0"
+                DESC="A Bevy plugin for Ratatui (terminal UI library)"
+                REPO="https://github.com/bevy-ratatui/bevy_ratatui"
+                CONTRIBUTORS='vec!["Johan Klokkhammer Helsing", "And 10+ contributors"]'
+                ;;
+            "color-eyre")
+                LICENSE="MIT OR Apache-2.0"
+                DESC="An error report handler for panics and eyre::Report"
+                REPO="https://github.com/eyre-rs/color-eyre"
+                CONTRIBUTORS='vec!["Jane Lusby", "And 20+ contributors"]'
+                ;;
+            *)
+                LICENSE="Unknown"
+                DESC="Rust library dependency"
+                REPO="https://crates.io/crates/$dep"
+                CONTRIBUTORS='vec!["Various contributors"]'
+                ;;
+        esac
+
+        if [ "$FIRST" = true ]; then
+            FIRST=false
+        else
+            echo "," >> src/core/credits.rs
+        fi
+
+        cat >> src/core/credits.rs << EOF
+        LibraryInfo {
+            name: "$dep",
+            version: "$VERSION",
+            license: "$LICENSE",
+            description: "$DESC",
+            repository: "$REPO",
+            contributors: $CONTRIBUTORS,
+        }
+EOF
+    done
+
+    cat >> src/core/credits.rs << 'EOF'
+    ]
+}
+
+/// Display comprehensive credits information
+pub fn display_comprehensive_credits() {
+    println!("🎉 AI Code Buddy - Comprehensive Credits & Acknowledgments");
+    println!("==========================================================");
+    println!();
+
+    // Project Information
+    println!("📚 About AI Code Buddy:");
+    println!("An intelligent code analysis tool with elegant Bevy-powered TUI");
+    println!("that provides comprehensive code reviews with AI assistance.");
+    println!("Repository: https://github.com/edgarhsanchez/ai_code_buddy");
+    println!();
+
+    // Project Contributors
+    println!("👥 Project Contributors:");
+    println!("------------------------");
+    let contributors = get_project_contributors();
+    for contributor in contributors {
+        println!(
+            "  • {} <{}> ({} commits)",
+            contributor.name, contributor.email, contributor.contributions
+        );
+    }
+    println!();
+
+    // Library Dependencies
+    println!("📦 Library Dependencies & Licenses:");
+    println!("-----------------------------------");
+    let libraries = get_library_dependencies();
+
+    for library in libraries {
+        println!("🔧 {} v{}", library.name, library.version);
+        println!("   📄 License: {}", library.license);
+        println!("   📖 Description: {}", library.description);
+        println!("   🔗 Repository: {}", library.repository);
+        println!("   👥 Key Contributors:");
+
+        for contributor in &library.contributors {
+            println!("     • {contributor}");
+        }
+        println!();
+    }
+
+    // Special Thanks
+    println!("🙏 Special Thanks:");
+    println!("------------------");
+    println!("  • The Rust Programming Language team");
+    println!("  • All open source contributors");
+    println!("  • The Bevy game engine community");
+    println!("  • The broader Rust ecosystem");
+    println!();
+
+    // Call to Action
+    println!("💡 Want to contribute? Visit: https://github.com/edgarhsanchez/ai_code_buddy");
+    println!("🐛 Found a bug? Report it: https://github.com/edgarhsanchez/ai_code_buddy/issues");
+}
+EOF
+
+    echo "📝 Formatting generated credits.rs..."
+    cargo fmt -- src/core/credits.rs
+
+    echo "✅ Generated credits.rs with current contributors and dependencies"
+}
+
+# Function to run code quality checks
+run_quality_checks() {
+    echo "🔍 Running code quality checks..."
+
+    # Check if we're in a Rust project
+    if [ ! -f "Cargo.toml" ]; then
+        echo "❌ Error: Cargo.toml not found. This doesn't appear to be a Rust project."
+        exit 1
+    fi
+
+    # Check if cargo is available
+    if ! command -v cargo &> /dev/null; then
+        echo "❌ Error: cargo command not found. Please install Rust."
+        exit 1
+    fi
+
+    echo "📦 Checking Cargo.toml format..."
+    if command -v cargo-toml-fmt &> /dev/null; then
+        if ! cargo tomlfmt --check Cargo.toml; then
+            echo "❌ Cargo.toml formatting issues found. Run 'cargo tomlfmt Cargo.toml' to fix."
+            exit 1
+        fi
+    else
+        echo "   cargo-toml-fmt not installed, skipping Cargo.toml format check."
+        echo "   Install with: cargo install cargo-toml-fmt"
+    fi
+
+    echo "🧹 Running cargo fmt check..."
+    if ! cargo fmt --check; then
+        echo "❌ Code formatting issues found. Run 'cargo fmt' to fix."
+        exit 1
+    fi
+
+    echo "🔍 Running cargo clippy..."
+    if ! cargo clippy -- -D warnings; then
+        echo "❌ Clippy warnings found. Please fix them before proceeding."
+        exit 1
+    fi
+
+    echo "📝 Checking code formatting..."
+    if ! cargo fmt -- --check; then
+        echo "❌ Code formatting issues found. Please run 'cargo fmt' to fix them before proceeding."
+        exit 1
+    fi
+
+    echo "✅ Running cargo check..."
+    if ! cargo check; then
+        echo "❌ Compilation errors found. Please fix them before proceeding."
+        exit 1
+    fi
+
+    echo "🧪 Running tests..."
+    if ! cargo test; then
+        echo "❌ Tests failed. Please fix them before proceeding."
+        exit 1
+    fi
+
+    echo "📊 Running cargo audit (if available)..."
+    if command -v cargo-audit &> /dev/null; then
+        if ! cargo audit; then
+            echo "⚠️  Security vulnerabilities found. Please review and fix."
+            echo "   You can run 'cargo audit fix' to attempt automatic fixes."
+            echo "   Continuing with version bump despite vulnerabilities..."
+        fi
+    else
+        echo "   cargo-audit not installed, skipping security audit."
+        echo "   Install with: cargo install cargo-audit"
+    fi
+
+    echo "📏 Checking for large files..."
+    # Check for files larger than 10MB
+    LARGE_FILES=$(find . -type f -size +10M -not -path "./target/*" -not -path "./.git/*" 2>/dev/null)
+    if [ -n "$LARGE_FILES" ]; then
+        echo "⚠️  Large files found (>10MB):"
+        echo "$LARGE_FILES"
+        echo "   Consider adding them to .gitignore or using git-lfs."
+    fi
+
+    echo "🔍 Checking for TODO/FIXME comments..."
+    TODO_COUNT=$(grep -r "TODO\|FIXME\|XXX\|HACK" --include="*.rs" --exclude-dir=target --exclude-dir=.git . 2>/dev/null | wc -l)
+    if [ "$TODO_COUNT" -gt 0 ]; then
+        echo "📝 Found $TODO_COUNT TODO/FIXME comments in the codebase."
+        echo "   Consider addressing them before release."
+    fi
+
+    echo "✅ All quality checks passed!"
+}
+
+# Check for flags
+DRY_RUN=false
+REDO=false
+
+for arg in "$@"; do
+    case $arg in
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        --redo)
+            REDO=true
+            shift
+            ;;
+        *)
+            # This is the version number
+            ;;
+    esac
+done
+
+# If redo flag is set, get current version and skip version increment
+if [ "$REDO" = true ]; then
+    # Extract current version from Cargo.toml
+    CURRENT_VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+    
+    if [ -z "$CURRENT_VERSION" ]; then
+        echo "Error: Could not find current version in Cargo.toml"
+        exit 1
+    fi
+    
+    NEW_VERSION="$CURRENT_VERSION"
+    echo "🔄 Redo mode: Using current version $NEW_VERSION"
+    
+elif [ -z "$1" ] || [ "$DRY_RUN" = true ]; then
   # Extract current version from Cargo.toml
   CURRENT_VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
   
@@ -31,12 +455,70 @@ if [ -z "$1" ]; then
   NEW_PATCH=$((PATCH + 1))
   NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
   
-  echo "Auto-incrementing version from $CURRENT_VERSION to $NEW_VERSION"
+  if [ "$DRY_RUN" = true ]; then
+    echo "Auto-incrementing version from $CURRENT_VERSION to $NEW_VERSION (DRY RUN)"
+  else
+    echo "Auto-incrementing version from $CURRENT_VERSION to $NEW_VERSION"
+  fi
 else
   NEW_VERSION=$1
 fi
 
 BRANCH_NAME="bump-version-$NEW_VERSION"
+
+# Run quality checks before proceeding
+echo "🔍 Running pre-release quality checks..."
+
+# Generate updated credits.rs before running quality checks
+generate_credits
+
+run_quality_checks
+echo ""
+
+if [ "$DRY_RUN" = true ]; then
+    if [ "$REDO" = true ]; then
+        echo "🔍 DRY RUN: Would redo version $NEW_VERSION (regenerate credits, run checks, repush tag)"
+    else
+        echo "🔍 DRY RUN: Would update version to $NEW_VERSION"
+        echo "🔍 DRY RUN: Would create branch $BRANCH_NAME"
+    fi
+    echo "🔍 DRY RUN: Would commit changes and create tag v$NEW_VERSION"
+    echo "✅ Dry run completed successfully!"
+    exit 0
+fi
+
+if [ "$REDO" = true ]; then
+    echo "🔄 Redo mode: Regenerating credits and repushing tag v$NEW_VERSION..."
+    
+    # Update Cargo.lock to ensure consistency
+    echo "🔄 Updating Cargo.lock..."
+    cargo update --workspace
+    echo "✅ Cargo.lock updated successfully!"
+    
+    # Add the updated credits.rs and Cargo.lock
+    git add src/core/credits.rs Cargo.lock
+    git commit -m "feat: update credits and dependencies for v$NEW_VERSION
+
+- Updated project contributors from git history  
+- Refreshed library dependencies and licenses
+- Auto-generated comprehensive credits information"
+    
+    # Delete and recreate the tag
+    echo "🏷️  Updating version tag: v$NEW_VERSION..."
+    git tag -d "v$NEW_VERSION" 2>/dev/null || echo "   Local tag v$NEW_VERSION not found"
+    git push origin ":refs/tags/v$NEW_VERSION" 2>/dev/null || echo "   Remote tag v$NEW_VERSION not found"
+    git tag "v$NEW_VERSION"
+    echo "🚀 Pushing updated tag to remote..."
+    git push origin "v$NEW_VERSION"
+    echo "✅ Tag updated and pushed!"
+    
+    echo ""
+    echo "🎉 Redo complete!"
+    echo "   Version: $NEW_VERSION"
+    echo "   Updated tag: v$NEW_VERSION"
+    echo "   Credits regenerated and tag repushed"
+    exit 0
+fi
 
 # Update version in Cargo.toml (only the package version, not dependencies)
 echo "📝 Updating version in Cargo.toml to $NEW_VERSION..."
@@ -59,16 +541,13 @@ echo "🌿 Creating new branch: $BRANCH_NAME..."
 git checkout -b "$BRANCH_NAME"
 echo "✅ Branch created and checked out!"
 
-# Add both Cargo.toml and Cargo.lock
-echo "📦 Staging version files..."
-git add Cargo.toml Cargo.lock
-echo "✅ Files staged!"
+# Add both Cargo.toml, Cargo.lock, and the updated credits.rs
+git add Cargo.toml Cargo.lock src/core/credits.rs
+git commit -m "chore: bump version to $NEW_VERSION
 
-echo "💾 Committing version bump..."
-git commit -m "chore: bump version to $NEW_VERSION"
-echo "✅ Commit created!"
-
-echo "🚀 Pushing branch to remote..."
+- Updated project contributors from git history
+- Refreshed library dependencies and licenses
+- Auto-generated comprehensive credits information"
 git push origin "$BRANCH_NAME"
 echo "✅ Branch pushed!"
 

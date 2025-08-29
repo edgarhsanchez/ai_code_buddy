@@ -402,7 +402,7 @@ fn test_analysis_event_handler_enter_key_start_analysis() {
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
-            source_branch: "main".to_string(),
+            source_branch: "HEAD".to_string(),
             target_branch: "HEAD".to_string(),
             cli_mode: false,
             verbose: false,

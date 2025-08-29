@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 /// Information about a library dependency
 #[derive(Debug, Clone)]
 pub struct LibraryInfo {
@@ -25,7 +23,7 @@ pub fn get_project_contributors() -> Vec<Contributor> {
         Contributor {
             name: "Edgar Sanchez",
             email: "esanchez@m2iab.com",
-            contributions: 81,
+            contributions: 82,
         }
 ,
         Contributor {
@@ -320,7 +318,10 @@ pub fn display_comprehensive_credits() {
     println!("------------------------");
     let contributors = get_project_contributors();
     for contributor in contributors {
-        println!("  • {} <{}> ({} commits)", contributor.name, contributor.email, contributor.contributions);
+        println!(
+            "  • {} <{}> ({} commits)",
+            contributor.name, contributor.email, contributor.contributions
+        );
     }
     println!();
 
@@ -337,7 +338,7 @@ pub fn display_comprehensive_credits() {
         println!("   👥 Key Contributors:");
 
         for contributor in &library.contributors {
-            println!("     • {}", contributor);
+            println!("     • {contributor}");
         }
         println!();
     }

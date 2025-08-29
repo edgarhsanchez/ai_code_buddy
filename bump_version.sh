@@ -1,5 +1,55 @@
 #!/bin/bash
 # filepath: /Volumes/U34 Bolt/Documents/github/ai_code_buddy/bump_version.sh
+#
+# Version bump script for ai-code-buddy
+# 
+# Usage:
+#   ./bump_version.sh [VERSION] [FLAGS]
+#   
+# Arguments:
+#   VERSION       Optional. If not provided, auto-increments patch version
+#   
+# Flags:
+#   --dry-run     Preview changes without executing them
+#   --redo        Regenerate credits and repush the current version tag
+#   
+# Examples:
+#   ./bump_version.sh                    # Auto-increment patch version
+#   ./bump_version.sh 1.2.3             # Set specific version
+#   ./bump_version.sh --dry-run          # Preview auto-increment
+#   ./bump_version.sh --redo             # Regenerate credits and repush current tag
+#   ./bump_version.sh 1.2.3 --dry-run   # Preview specific version
+
+# Function to show help
+show_help() {
+    echo "Version bump script for ai-code-buddy"
+    echo ""
+    echo "Usage: $0 [VERSION] [FLAGS]"
+    echo ""
+    echo "Arguments:"
+    echo "  VERSION       Optional. If not provided, auto-increments patch version"
+    echo ""
+    echo "Flags:"
+    echo "  --dry-run     Preview changes without executing them"
+    echo "  --redo        Regenerate credits and repush the current version tag"
+    echo "  --help        Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0                    # Auto-increment patch version"
+    echo "  $0 1.2.3             # Set specific version"
+    echo "  $0 --dry-run          # Preview auto-increment"
+    echo "  $0 --redo             # Regenerate credits and repush current tag"
+    echo "  $0 1.2.3 --dry-run   # Preview specific version"
+    echo ""
+}
+
+# Check for help flag
+for arg in "$@"; do
+    if [ "$arg" = "--help" ] || [ "$arg" = "-h" ]; then
+        show_help
+        exit 0
+    fi
+done
 
 # Function to generate credits.rs with current contributors and dependencies
 generate_credits() {
@@ -358,15 +408,40 @@ run_quality_checks() {
     echo "✅ All quality checks passed!"
 }
 
-# Check for dry-run flag
+# Check for flags
 DRY_RUN=false
-if [ "$1" = "--dry-run" ]; then
-    DRY_RUN=true
-    shift
-fi
+REDO=false
 
-# If no version provided, auto-increment patch version
-if [ -z "$1" ] || [ "$DRY_RUN" = true ]; then
+for arg in "$@"; do
+    case $arg in
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        --redo)
+            REDO=true
+            shift
+            ;;
+        *)
+            # This is the version number
+            ;;
+    esac
+done
+
+# If redo flag is set, get current version and skip version increment
+if [ "$REDO" = true ]; then
+    # Extract current version from Cargo.toml
+    CURRENT_VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+    
+    if [ -z "$CURRENT_VERSION" ]; then
+        echo "Error: Could not find current version in Cargo.toml"
+        exit 1
+    fi
+    
+    NEW_VERSION="$CURRENT_VERSION"
+    echo "🔄 Redo mode: Using current version $NEW_VERSION"
+    
+elif [ -z "$1" ] || [ "$DRY_RUN" = true ]; then
   # Extract current version from Cargo.toml
   CURRENT_VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
   
@@ -401,10 +476,47 @@ run_quality_checks
 echo ""
 
 if [ "$DRY_RUN" = true ]; then
-    echo "🔍 DRY RUN: Would update version to $NEW_VERSION"
-    echo "🔍 DRY RUN: Would create branch $BRANCH_NAME"
+    if [ "$REDO" = true ]; then
+        echo "🔍 DRY RUN: Would redo version $NEW_VERSION (regenerate credits, run checks, repush tag)"
+    else
+        echo "🔍 DRY RUN: Would update version to $NEW_VERSION"
+        echo "🔍 DRY RUN: Would create branch $BRANCH_NAME"
+    fi
     echo "🔍 DRY RUN: Would commit changes and create tag v$NEW_VERSION"
     echo "✅ Dry run completed successfully!"
+    exit 0
+fi
+
+if [ "$REDO" = true ]; then
+    echo "🔄 Redo mode: Regenerating credits and repushing tag v$NEW_VERSION..."
+    
+    # Update Cargo.lock to ensure consistency
+    echo "🔄 Updating Cargo.lock..."
+    cargo update --workspace
+    echo "✅ Cargo.lock updated successfully!"
+    
+    # Add the updated credits.rs and Cargo.lock
+    git add src/core/credits.rs Cargo.lock
+    git commit -m "feat: update credits and dependencies for v$NEW_VERSION
+
+- Updated project contributors from git history  
+- Refreshed library dependencies and licenses
+- Auto-generated comprehensive credits information"
+    
+    # Delete and recreate the tag
+    echo "🏷️  Updating version tag: v$NEW_VERSION..."
+    git tag -d "v$NEW_VERSION" 2>/dev/null || echo "   Local tag v$NEW_VERSION not found"
+    git push origin ":refs/tags/v$NEW_VERSION" 2>/dev/null || echo "   Remote tag v$NEW_VERSION not found"
+    git tag "v$NEW_VERSION"
+    echo "🚀 Pushing updated tag to remote..."
+    git push origin "v$NEW_VERSION"
+    echo "✅ Tag updated and pushed!"
+    
+    echo ""
+    echo "🎉 Redo complete!"
+    echo "   Version: $NEW_VERSION"
+    echo "   Updated tag: v$NEW_VERSION"
+    echo "   Credits regenerated and tag repushed"
     exit 0
 fi
 

@@ -48,6 +48,12 @@ EOF
         NAME=$(echo "$NAME_EMAIL" | cut -d'|' -f1 | sed 's/^ *//;s/ *$//')  # Trim spaces
         EMAIL=$(echo "$NAME_EMAIL" | cut -d'|' -f2)
 
+        if [ "$FIRST" = true ]; then
+            FIRST=false
+        else
+            echo "," >> src/core/credits.rs
+        fi
+
         cat >> src/core/credits.rs << EOF
         Contributor {
             name: "$NAME",
@@ -55,11 +61,6 @@ EOF
             contributions: $COUNT,
         }
 EOF
-        if [ "$FIRST" = true ]; then
-            FIRST=false
-        else
-            echo "," >> src/core/credits.rs
-        fi
     done
 
     cat >> src/core/credits.rs << 'EOF'
@@ -183,6 +184,12 @@ EOF
                 ;;
         esac
 
+        if [ "$FIRST" = true ]; then
+            FIRST=false
+        else
+            echo "," >> src/core/credits.rs
+        fi
+
         cat >> src/core/credits.rs << EOF
         LibraryInfo {
             name: "$dep",
@@ -193,11 +200,6 @@ EOF
             contributors: $CONTRIBUTORS,
         }
 EOF
-        if [ "$FIRST" = true ]; then
-            FIRST=false
-        else
-            echo "," >> src/core/credits.rs
-        fi
     done
 
     cat >> src/core/credits.rs << 'EOF'
@@ -391,11 +393,12 @@ BRANCH_NAME="bump-version-$NEW_VERSION"
 
 # Run quality checks before proceeding
 echo "🔍 Running pre-release quality checks..."
+
+# Generate updated credits.rs before running quality checks
+generate_credits
+
 run_quality_checks
 echo ""
-
-# Generate updated credits.rs before updating version
-generate_credits
 
 if [ "$DRY_RUN" = true ]; then
     echo "🔍 DRY RUN: Would update version to $NEW_VERSION"

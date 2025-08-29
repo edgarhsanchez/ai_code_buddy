@@ -42,12 +42,6 @@ EOF
     # Add contributors from git
     FIRST=true
     echo "$CONTRIBUTORS" | while IFS= read -r line; do
-        if [ "$FIRST" = true ]; then
-            FIRST=false
-        else
-            echo "," >> src/core/credits.rs
-        fi
-
         # Parse contributor info (count name|email)
         COUNT=$(echo "$line" | awk '{print $1}' | tr -d ' ')
         NAME_EMAIL=$(echo "$line" | sed 's/^[[:space:]]*[0-9][0-9]*[[:space:]]*//')  # Remove count and spaces
@@ -61,6 +55,11 @@ EOF
             contributions: $COUNT,
         }
 EOF
+        if [ "$FIRST" = true ]; then
+            FIRST=false
+        else
+            echo "," >> src/core/credits.rs
+        fi
     done
 
     cat >> src/core/credits.rs << 'EOF'
@@ -76,12 +75,6 @@ EOF
     FIRST=true
     echo "$ALL_DEPENDENCIES" | while IFS= read -r dep; do
         if [ -z "$dep" ]; then continue; fi
-
-        if [ "$FIRST" = true ]; then
-            FIRST=false
-        else
-            echo "," >> src/core/credits.rs
-        fi
 
         # Get version from Cargo.toml
         DEP_LINE=$(grep "^$dep = " Cargo.toml)
@@ -200,6 +193,11 @@ EOF
             contributors: $CONTRIBUTORS,
         }
 EOF
+        if [ "$FIRST" = true ]; then
+            FIRST=false
+        else
+            echo "," >> src/core/credits.rs
+        fi
     done
 
     cat >> src/core/credits.rs << 'EOF'
@@ -263,6 +261,9 @@ pub fn display_comprehensive_credits() {
     println!("🐛 Found a bug? Report it: https://github.com/edgarhsanchez/ai_code_buddy/issues");
 }
 EOF
+
+    echo "📝 Formatting generated credits.rs..."
+    cargo fmt -- src/core/credits.rs
 
     echo "✅ Generated credits.rs with current contributors and dependencies"
 }

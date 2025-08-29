@@ -23,14 +23,13 @@ pub fn get_project_contributors() -> Vec<Contributor> {
         Contributor {
             name: "Edgar Sanchez",
             email: "esanchez@m2iab.com",
-            contributions: 83,
-        }
-,
+            contributions: 84,
+        },
         Contributor {
             name: "Edgar H Sanchez",
             email: "esanchez@m2iab.com",
             contributions: 14,
-        }
+        },
     ]
 }
 
@@ -44,8 +43,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Flexible concrete Error type built on std::error::Error",
             repository: "https://github.com/dtolnay/anyhow",
             contributors: vec!["David Tolnay", "And 50+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "bevy",
             version: "0.15",
@@ -53,8 +51,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "A refreshingly simple data-driven game engine built in Rust",
             repository: "https://github.com/bevyengine/bevy",
             contributors: vec!["Carter Anderson", "Alice Cecile", "And 300+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "bevy_ratatui",
             version: "0.7.0",
@@ -62,8 +59,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "A Bevy plugin for Ratatui (terminal UI library)",
             repository: "https://github.com/bevy-ratatui/bevy_ratatui",
             contributors: vec!["Johan Klokkhammer Helsing", "And 10+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "bevy-tokio-tasks",
             version: "0.15.0",
@@ -71,8 +67,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/bevy-tokio-tasks",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "clap",
             version: "4.0",
@@ -80,8 +75,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "A full featured, fast Command Line Argument Parser for Rust",
             repository: "https://github.com/clap-rs/clap",
             contributors: vec!["Kevin K. <kbknapp@gmail.com>", "And 200+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "color-eyre",
             version: "0.6.3",
@@ -89,8 +83,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "An error report handler for panics and eyre::Report",
             repository: "https://github.com/eyre-rs/color-eyre",
             contributors: vec!["Jane Lusby", "And 20+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "crossterm",
             version: "0.28.1",
@@ -98,8 +91,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Cross-platform terminal manipulation library",
             repository: "https://github.com/crossterm-rs/crossterm",
             contributors: vec!["T. Postma", "And 50+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "futures",
             version: "0.3.31",
@@ -107,8 +99,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "An implementation of futures and streams featuring zero allocations",
             repository: "https://github.com/rust-lang/futures-rs",
             contributors: vec!["Alex Crichton", "And 100+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "git2",
             version: "0.19",
@@ -116,8 +107,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust bindings to libgit2 for interoperating with git repositories",
             repository: "https://github.com/rust-lang/git2-rs",
             contributors: vec!["Alex Crichton", "And 50+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "insta",
             version: "1.40.0",
@@ -125,8 +115,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/insta",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "kalosm",
             version: "0.4.0",
@@ -134,8 +123,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "A user-friendly interface for pre-trained large language models",
             repository: "https://github.com/floneum/kalosm",
             contributors: vec!["Evan Almloff", "And 10+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "mockall",
             version: "0.13.0",
@@ -143,8 +131,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/mockall",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "num_cpus",
             version: "1.16",
@@ -152,8 +139,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/num_cpus",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "pretty_assertions",
             version: "1.4.1",
@@ -161,8 +147,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/pretty_assertions",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "proptest",
             version: "1.5.0",
@@ -170,8 +155,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/proptest",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "rat-cursor",
             version: "1.2.0",
@@ -179,8 +163,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/rat-cursor",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "rat-event",
             version: "1.1.0",
@@ -188,8 +171,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/rat-event",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "rat-focus",
             version: "0.31.0",
@@ -197,8 +179,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/rat-focus",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "ratatui",
             version: "0.29.0",
@@ -206,8 +187,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "A Rust library to build rich terminal user interfaces",
             repository: "https://github.com/ratatui/ratatui",
             contributors: vec!["Florian Dehau", "Joshka", "And 100+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "rayon",
             version: "1.8",
@@ -215,8 +195,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/rayon",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "regex",
             version: "1.11.1",
@@ -224,8 +203,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "An implementation of regular expressions for Rust",
             repository: "https://github.com/rust-lang/regex",
             contributors: vec!["Andrew Gallant", "And 50+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "rstest",
             version: "0.23.0",
@@ -233,8 +211,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/rstest",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "serde",
             version: "1.0",
@@ -242,8 +219,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "A generic serialization/deserialization framework",
             repository: "https://github.com/serde-rs/serde",
             contributors: vec!["David Tolnay", "And 100+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "serde_json",
             version: "1.0",
@@ -251,8 +227,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/serde_json",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "serial_test",
             version: "3.1.1",
@@ -260,8 +235,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/serial_test",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "tempfile",
             version: "3.13.0",
@@ -269,8 +243,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/tempfile",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "tokio",
             version: "1.47.0",
@@ -278,8 +251,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "An event-driven, non-blocking I/O platform for writing async I/O",
             repository: "https://github.com/tokio-rs/tokio",
             contributors: vec!["Carl Lerche", "Sean McArthur", "And 200+ contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "tokio-test",
             version: "0.4.4",
@@ -287,8 +259,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "Rust library dependency",
             repository: "https://crates.io/crates/tokio-test",
             contributors: vec!["Various contributors"],
-        }
-,
+        },
         LibraryInfo {
             name: "uuid",
             version: "1.11.0",
@@ -296,7 +267,7 @@ pub fn get_library_dependencies() -> Vec<LibraryInfo> {
             description: "A library to generate and parse UUIDs",
             repository: "https://github.com/uuid-rs/uuid",
             contributors: vec!["Ashley Mannix", "And 50+ contributors"],
-        }
+        },
     ]
 }
 

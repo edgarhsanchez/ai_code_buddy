@@ -14,11 +14,15 @@ pub struct Review {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Issue {
     pub file: String,
-    pub line: usize,
+    pub line: u32,
     pub severity: String,
     pub category: String,
     pub description: String,
     pub commit_status: CommitStatus,
+    /// The actual line(s) of code that triggered this issue
+    pub code_snippet: String,
+    /// Optional: Additional context lines around the issue
+    pub context_lines: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -32,8 +32,8 @@ impl Plugin for OverviewPlugin {
 
 pub fn initialize_overview_state(mut overview_state: ResMut<OverviewWidgetState>, args: Res<Args>) {
     overview_state.repo_info.path = args.repo_path.clone();
-    overview_state.repo_info.source_branch = args.source_branch.clone();
-    overview_state.repo_info.target_branch = args.target_branch.clone();
+    overview_state.repo_info.source_branch = args.get_source_branch(&args.repo_path);
+    overview_state.repo_info.target_branch = args.get_target_branch();
 
     // TODO: Calculate files to analyze
     overview_state.repo_info.files_to_analyze = 42; // Placeholder

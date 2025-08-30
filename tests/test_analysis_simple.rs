@@ -46,18 +46,21 @@ fn test_perform_analysis_basic() -> Result<()> {
 
     let args = Args {
         repo_path: temp_dir.path().to_string_lossy().to_string(),
-        source_branch: "main".to_string(),
-        target_branch: "HEAD".to_string(),
+        source_branch: Some("main".to_string()),
+        target_branch: Some("HEAD".to_string()),
         verbose: false,
         output_format: OutputFormat::Json,
         exclude_patterns: vec![],
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
-        disable_ai: false,
         cli_mode: true,
         show_credits: false,
         parallel: false,
+        model: None,
+        list_models: false,
+        model: None,
+        list_models: false,
     };
 
     let result = perform_analysis(&args);
@@ -70,18 +73,19 @@ fn test_perform_analysis_basic() -> Result<()> {
 fn test_perform_analysis_invalid_repository() {
     let args = Args {
         repo_path: "/non/existent/path".to_string(),
-        source_branch: "main".to_string(),
-        target_branch: "HEAD".to_string(),
+        source_branch: Some("main".to_string()),
+        target_branch: Some("HEAD".to_string()),
         verbose: false,
         output_format: OutputFormat::Summary,
         exclude_patterns: vec![],
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
-        disable_ai: false,
         cli_mode: true,
         show_credits: false,
         parallel: false,
+        model: None,
+        list_models: false,
     };
 
     let result = perform_analysis(&args);
@@ -121,15 +125,14 @@ fn test_analysis_gpu_settings() -> Result<()> {
     // Test with GPU enabled
     let args_gpu = Args {
         repo_path: temp_dir.path().to_string_lossy().to_string(),
-        source_branch: "main".to_string(),
-        target_branch: "HEAD".to_string(),
+        source_branch: Some("main".to_string()),
+        target_branch: Some("HEAD".to_string()),
         verbose: false,
         output_format: OutputFormat::Summary,
         exclude_patterns: vec![],
         include_patterns: vec![],
         use_gpu: true,
         force_cpu: false,
-        disable_ai: false,
         cli_mode: true,
         show_credits: false,
     };
@@ -140,15 +143,14 @@ fn test_analysis_gpu_settings() -> Result<()> {
     // Test with CPU forced
     let args_cpu = Args {
         repo_path: temp_dir.path().to_string_lossy().to_string(),
-        source_branch: "main".to_string(),
-        target_branch: "HEAD".to_string(),
+        source_branch: Some("main".to_string()),
+        target_branch: Some("HEAD".to_string()),
         verbose: false,
         output_format: OutputFormat::Summary,
         exclude_patterns: vec![],
         include_patterns: vec![],
         use_gpu: false,
         force_cpu: true,
-        disable_ai: false,
         cli_mode: true,
         show_credits: false,
     };

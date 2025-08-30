@@ -55,6 +55,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Parse command line arguments
     let args = args::Args::parse();
 
+    // Handle special flags first
+    if args.list_models {
+        args::Args::print_model_help();
+        return Ok(());
+    }
+
     // Handle CLI mode
     if args.cli_mode {
         return core::run_cli_mode(args);
@@ -108,8 +114,8 @@ pub fn initialize_app(mut next_state: ResMut<NextState<AppState>>, args: Res<arg
     );
     println!("📂 Repository: {}", args.repo_path);
     println!(
-        "🌿 Branches: {} → {}",
-        args.source_branch, args.target_branch
+        "🌿 Comparing: {} → {}",
+        args.get_source_branch(&args.repo_path), args.get_target_branch()
     );
 
     next_state.set(AppState::Overview);

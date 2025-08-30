@@ -9,7 +9,7 @@ use tempfile::TempDir;
 fn test_run_cli_mode_with_credits() {
     let args = Args {
         repo_path: "/test/repo".to_string(),
-        source_branch: "main".to_string(),
+        source_branch: Some("main".to_string()),
         target_branch: "feature".to_string(),
         cli_mode: true,
         verbose: false,
@@ -20,7 +20,8 @@ fn test_run_cli_mode_with_credits() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
-        disable_ai: false,
+        model: None,
+        list_models: false,
     };
 
     let result = run_cli_mode(args);
@@ -35,7 +36,7 @@ fn test_run_cli_mode_basic_functionality() {
 
     let args = Args {
         repo_path,
-        source_branch: "main".to_string(),
+        source_branch: Some("main".to_string()),
         target_branch: "main".to_string(),
         cli_mode: true,
         verbose: false,
@@ -46,7 +47,8 @@ fn test_run_cli_mode_basic_functionality() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
-        disable_ai: false,
+        model: None,
+        list_models: false,
     };
 
     // This should work even with an empty/non-git directory
@@ -70,7 +72,7 @@ fn test_run_cli_mode_different_output_formats() {
     for format in output_formats {
         let args = Args {
             repo_path: repo_path.clone(),
-            source_branch: "main".to_string(),
+            source_branch: Some("main".to_string()),
             target_branch: "main".to_string(),
             cli_mode: true,
             verbose: false,
@@ -81,7 +83,8 @@ fn test_run_cli_mode_different_output_formats() {
             use_gpu: false,
             force_cpu: false,
             parallel: false,
-            disable_ai: false,
+        model: None,
+        list_models: false,
         };
 
         let result = run_cli_mode(args);
@@ -97,7 +100,7 @@ fn test_run_cli_mode_with_patterns() {
 
     let args = Args {
         repo_path,
-        source_branch: "main".to_string(),
+        source_branch: Some("main".to_string()),
         target_branch: "main".to_string(),
         cli_mode: true,
         verbose: false,
@@ -108,7 +111,8 @@ fn test_run_cli_mode_with_patterns() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
-        disable_ai: false,
+        model: None,
+        list_models: false,
     };
 
     let result = run_cli_mode(args);
@@ -123,7 +127,7 @@ fn test_run_cli_mode_verbose_mode() {
 
     let args = Args {
         repo_path,
-        source_branch: "main".to_string(),
+        source_branch: Some("main".to_string()),
         target_branch: "main".to_string(),
         cli_mode: true,
         verbose: true,
@@ -134,7 +138,8 @@ fn test_run_cli_mode_verbose_mode() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
-        disable_ai: false,
+        model: None,
+        list_models: false,
     };
 
     let result = run_cli_mode(args);
@@ -150,7 +155,7 @@ fn test_run_cli_mode_gpu_flags() {
     // Test with GPU enabled
     let args_gpu = Args {
         repo_path: repo_path.clone(),
-        source_branch: "main".to_string(),
+        source_branch: Some("main".to_string()),
         target_branch: "main".to_string(),
         cli_mode: true,
         verbose: false,
@@ -161,7 +166,8 @@ fn test_run_cli_mode_gpu_flags() {
         use_gpu: true,
         force_cpu: false,
         parallel: false,
-        disable_ai: false,
+        model: None,
+        list_models: false,
     };
 
     let result_gpu = run_cli_mode(args_gpu);
@@ -170,7 +176,7 @@ fn test_run_cli_mode_gpu_flags() {
     // Test with force CPU
     let args_cpu = Args {
         repo_path,
-        source_branch: "main".to_string(),
+        source_branch: Some("main".to_string()),
         target_branch: "main".to_string(),
         cli_mode: true,
         verbose: false,
@@ -181,7 +187,8 @@ fn test_run_cli_mode_gpu_flags() {
         use_gpu: false,
         force_cpu: true,
         parallel: false,
-        disable_ai: false,
+        model: None,
+        list_models: false,
     };
 
     let result_cpu = run_cli_mode(args_cpu);
@@ -214,7 +221,8 @@ fn test_args_parsing_for_cli_mode() {
         use_gpu: true,
         force_cpu: false,
         parallel: false,
-        disable_ai: false,
+        model: None,
+        list_models: false,
     };
 
     assert_eq!(args.repo_path, "/test/path");
@@ -235,7 +243,7 @@ fn test_run_cli_mode_error_handling() {
     // Test with invalid repository path
     let args = Args {
         repo_path: "/nonexistent/path/that/does/not/exist".to_string(),
-        source_branch: "main".to_string(),
+        source_branch: Some("main".to_string()),
         target_branch: "main".to_string(),
         cli_mode: true,
         verbose: false,
@@ -246,7 +254,8 @@ fn test_run_cli_mode_error_handling() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
-        disable_ai: false,
+        model: None,
+        list_models: false,
     };
 
     let result = run_cli_mode(args);
@@ -261,7 +270,7 @@ fn test_run_cli_mode_different_branches() {
 
     let args = Args {
         repo_path,
-        source_branch: "main".to_string(),
+        source_branch: Some("main".to_string()),
         target_branch: "develop".to_string(),
         cli_mode: true,
         verbose: false,
@@ -272,7 +281,8 @@ fn test_run_cli_mode_different_branches() {
         use_gpu: false,
         force_cpu: false,
         parallel: false,
-        disable_ai: false,
+        model: None,
+        list_models: false,
     };
 
     let result = run_cli_mode(args);

@@ -60,8 +60,8 @@ mod main_functions {
         println!("🚀 AI Code Buddy v{} - Initializing...", crate::APP_VERSION);
         println!("📂 Repository: {}", args.repo_path);
         println!(
-            "🌿 Branches: {} → {}",
-            args.source_branch, args.target_branch
+            "🌿 Comparing: {} → {}",
+            args.get_source_branch(&args.repo_path), args.get_target_branch()
         );
 
         next_state.set(AppState::Overview);

@@ -15,7 +15,7 @@ pub fn run_cli_mode(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     println!("📂 Repository: {}", args.repo_path);
     println!(
         "🌿 Comparing: {} → {}",
-        args.source_branch, args.target_branch
+        args.get_source_branch(&args.repo_path), args.get_target_branch()
     );
 
     if args.show_credits {
@@ -142,6 +142,8 @@ mod tests {
                 category: "Security".into(),
                 description: "test".into(),
                 commit_status: CommitStatus::Committed,
+                code_snippet: "fn main() {}".into(),
+                context_lines: None,
             }],
         }
     }

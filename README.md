@@ -134,7 +134,28 @@ docker run -v $(pwd):/workspace ai-code-buddy --cli
 
 ### Development Installation
 
-#### 📦 From Source (Latest Features)
+#### 🎯 Auto-Build Script (Recommended for Development)
+```bash
+# Clone the repository
+git clone https://github.com/edgarhsanchez/ai_code_buddy.git
+cd ai_code_buddy
+
+# Run the auto-build script (detects and enables optimal GPU features)
+./build-auto.sh
+
+# For production builds
+./build-auto.sh --release
+```
+
+**What the auto-build script does:**
+- 🔍 Automatically detects your system's GPU capabilities
+- 🍎 **macOS**: Enables Metal GPU acceleration if available
+- 🐧 **Linux**: Detects NVIDIA CUDA or Intel MKL support
+- 🪟 **Windows**: Detects NVIDIA CUDA or Intel MKL support
+- 🚀 Builds with optimal feature set for your system
+- 📝 Provides clear build status and usage instructions
+
+#### 📦 Manual Build from Source
 ```bash
 # Clone the repository
 git clone https://github.com/edgarhsanchez/ai_code_buddy.git
@@ -142,6 +163,16 @@ cd ai_code_buddy
 
 # Build with GPU acceleration (auto-detected)
 cargo build --release
+
+# Or manually specify features for your platform:
+# macOS with Metal:
+cargo build --release --features gpu-metal,parallel,llama
+
+# Linux/Windows with NVIDIA GPU:
+cargo build --release --features gpu-cuda,parallel,llama
+
+# Intel systems with MKL:
+cargo build --release --features gpu-mkl,parallel,llama
 
 # Run directly
 ./target/release/ai-code-buddy --help
@@ -322,7 +353,6 @@ ai-code-buddy [OPTIONS] [REPO_PATH]
 | `--include <PATTERN>` | | Include only files matching glob pattern | None | `--include "src/**"` |
 | `--gpu` | | Enable GPU acceleration (auto-detected) | Auto-detected | `--gpu` |
 | `--cpu` | | Force CPU mode (disable GPU) | GPU if available | `--cpu` |
-| `--disable-ai` | | Disable AI-powered analysis | AI enabled | `--disable-ai` |
 | `--help` | `-h` | Print help information | | `--help` |
 | `--version` | `-V` | Print version information | | `--version` |
 
@@ -348,30 +378,25 @@ ai-code-buddy --cli
 # Output: 🤖 AI inference enabled - using advanced AI analysis
 ```
 
-**Disable AI Analysis (Rule-based Only):**
+**AI-Enhanced Analysis:**
 ```bash
-# Use traditional rule-based analysis only
-ai-code-buddy --cli --disable-ai
-# Output: 🔍 AI inference disabled - using rule-based analysis only
-```
-
-**Performance Comparison:**
-```bash
-# AI-enhanced analysis (more comprehensive)
+# Comprehensive AI-powered code analysis 
 ai-code-buddy --cli --format summary
-# Result: ~33 issues detected
+# Result: Intelligent insights with detailed issue detection and recommendations
 
-# Rule-based analysis (faster)
-ai-code-buddy --cli --disable-ai --format summary  
-# Result: ~27 issues detected
+# Use different output formats for various needs
+ai-code-buddy --cli --format json     # For automation and CI/CD
+ai-code-buddy --cli --format detailed # For thorough review sessions
 ```
 
-#### When to Use Each Mode
+#### Analysis Features
 
-| Mode | Use Case | Pros | Cons |
-|------|----------|------|------|
-| **AI Enabled** (Default) | Comprehensive code review, architecture assessment | More thorough analysis, better insights | Slightly slower |
-| **AI Disabled** | Quick scans, CI/CD pipelines, performance-critical | Faster execution, consistent results | Fewer issues detected |
+AI Code Buddy provides comprehensive AI-powered analysis that includes:
+
+- **Smart Code Analysis**: Deep understanding of code patterns and potential issues
+- **Security Vulnerability Detection**: Advanced pattern recognition for security threats  
+- **Performance Optimization**: Intelligent suggestions for performance improvements
+- **Code Quality Assessment**: Comprehensive quality metrics and improvement recommendations
 
 ### Output Formats
 
@@ -1668,7 +1693,19 @@ export AI_CODE_BUDDY_MAX_FILE_SIZE="1048576"  # 1MB limit
 **💡 A:** Yes! AI Code Buddy works with any Git repository and can analyze both committed and uncommitted changes. It automatically detects the repository structure and programming languages.
 
 **❓ Q: Can I use it without GPU acceleration?**
-**💡 A:** Absolutely! The tool includes a comprehensive rule-based analysis engine that provides excellent results on CPU-only systems. GPU acceleration is an optional enhancement.
+**💡 A:** Absolutely! The tool automatically falls back to CPU-only mode if no GPU acceleration is available. The built-in analysis engine provides excellent results on any system.
+
+**❓ Q: How do I enable GPU acceleration?**
+**💡 A:** GPU acceleration is automatically detected and enabled during build:
+
+- **Automatic Detection**: Use `./build-auto.sh` for automatic hardware detection and optimal feature selection
+- **Manual Installation**: `cargo install ai-code-buddy` automatically enables appropriate GPU features for your platform
+- **Development Builds**: The build system detects available GPU backends and provides recommendations
+
+**Supported GPU Accelerations:**
+- 🍎 **Metal** (macOS): `cargo build --features gpu-metal`
+- 🟢 **CUDA** (Linux/Windows with NVIDIA): `cargo build --features gpu-cuda`  
+- 🔵 **Intel MKL** (Intel processors): `cargo build --features gpu-mkl`
 
 **❓ Q: How long does analysis take?**
 **💡 A:** Analysis time varies by repository size:

@@ -1,7 +1,9 @@
 use anyhow::Result;
+use kalosm::language::{Llama, ChatModelExt, TextStream};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tokio::sync::mpsc;
+use futures::StreamExt;
 
 use crate::core::review::{CommitStatus, Issue};
 
@@ -42,10 +44,12 @@ impl std::fmt::Display for GpuBackend {
 pub struct AIAnalyzer {
     backend: GpuBackend,
     enable_ai: bool,
+    model_initialized: bool,
+    model: Option<Llama>, // Store the model instance for reuse
 }
 
 impl AIAnalyzer {
-    pub async fn new(use_gpu: bool, enable_ai: bool) -> Result<Self> {
+    pub async fn new(use_gpu: bool) -> Result<Self> {
         println!("🧠 Initializing AI analyzer...");
 
         // Detect and configure GPU backend
@@ -57,13 +61,26 @@ impl AIAnalyzer {
 
         println!("🔧 Using backend: {backend:?}");
 
-        if enable_ai {
-            println!("🤖 AI inference enabled - using advanced AI analysis");
-        } else {
-            println!("� AI inference disabled - using rule-based analysis only");
-        }
+        println!("🤖 AI inference enabled - creating Kalosm model...");
+        // Create and store the model instance for reuse across all analyses
+        let (model_initialized, model) = match Llama::new_chat().await {
+            Ok(model) => {
+                println!("✅ Kalosm Llama model created successfully");
+                (true, Some(model))
+            }
+            Err(e) => {
+                println!("⚠️  Failed to create Kalosm model: {}", e);
+                println!("   Continuing with basic analysis");
+                (false, None)
+            }
+        };
 
-        let analyzer = AIAnalyzer { backend, enable_ai };
+        let analyzer = AIAnalyzer { 
+            backend, 
+            enable_ai: model_initialized,
+            model_initialized,
+            model,
+        };
 
         // Display the configured backend for diagnostics
         println!(
@@ -80,46 +97,59 @@ impl AIAnalyzer {
     }
 
     fn detect_gpu_backend() -> GpuBackend {
-        // Check if we're on Apple Silicon (Metal support)
-        if cfg!(target_os = "macos") && Self::is_apple_silicon() {
-            println!("🍎 Apple Silicon detected, using Metal backend");
-            GpuBackend::Metal
+        // If specific GPU features are enabled, use them in order of preference
+        #[cfg(feature = "gpu-metal")]
+        {
+            println!("🍎 Metal backend available (compiled)");
+            return GpuBackend::Metal;
         }
-        // Check for CUDA support (NVIDIA)
-        else if Self::has_cuda_support() {
-            println!("🟢 NVIDIA CUDA detected, using CUDA backend");
-            GpuBackend::Cuda
+        
+        #[cfg(all(feature = "gpu-cuda", not(feature = "gpu-metal")))]
+        {
+            println!("🟢 CUDA backend available (compiled)");
+            return GpuBackend::Cuda;
         }
-        // Check for Intel MKL support
-        else if Self::has_mkl_support() {
-            println!("🔵 Intel MKL detected, using MKL backend");
-            GpuBackend::Mkl
+        
+        #[cfg(all(feature = "gpu-mkl", not(feature = "gpu-metal"), not(feature = "gpu-cuda")))]
+        {
+            println!("🔵 MKL backend available (compiled)");
+            return GpuBackend::Mkl;
         }
+        
+        // If auto-gpu is enabled, provide recommendations based on hardware detection
+        #[cfg(all(feature = "auto-gpu", not(any(feature = "gpu-metal", feature = "gpu-cuda", feature = "gpu-mkl"))))]
+        {
+            println!("� Auto-GPU enabled - detecting optimal GPU backend...");
+            
+            // Provide platform-specific recommendations
+            #[cfg(all(target_os = "macos", metal_gpu_available))]
+            {
+                println!("💡 Metal GPU detected! Enable with: cargo build --features gpu-metal");
+                return GpuBackend::Cpu;
+            }
+            
+            #[cfg(all(not(target_os = "macos"), nvidia_gpu_available))]
+            {
+                println!("💡 NVIDIA GPU detected! Enable with: cargo build --features gpu-cuda");
+                return GpuBackend::Cpu;
+            }
+            
+            #[cfg(intel_mkl_available)]
+            {
+                println!("💡 Intel MKL detected! Enable with: cargo build --features gpu-mkl");
+                return GpuBackend::Cpu;
+            }
+            
+            println!("💻 No GPU acceleration detected - using CPU");
+        }
+        
+        #[cfg(not(any(feature = "gpu-metal", feature = "gpu-cuda", feature = "gpu-mkl", feature = "auto-gpu")))]
+        {
+            println!("💻 No GPU backends compiled - using CPU");
+        }
+        
         // Fallback to CPU
-        else {
-            println!("💻 No GPU acceleration detected, falling back to CPU");
-            GpuBackend::Cpu
-        }
-    }
-
-    fn is_apple_silicon() -> bool {
-        // Check if we're running on Apple Silicon
-        cfg!(target_arch = "aarch64") && cfg!(target_os = "macos")
-    }
-
-    fn has_cuda_support() -> bool {
-        // Check for NVIDIA GPU presence
-        // This is a simplified check - in production you might want to check for actual CUDA runtime
-        std::process::Command::new("nvidia-smi")
-            .output()
-            .map(|output| output.status.success())
-            .unwrap_or(false)
-    }
-
-    fn has_mkl_support() -> bool {
-        // Check for Intel processor
-        // This is a simplified check
-        cfg!(target_arch = "x86_64")
+        GpuBackend::Cpu
     }
 
     pub async fn analyze_file(
@@ -139,15 +169,13 @@ impl AIAnalyzer {
 
         let mut issues = Vec::new();
 
-        // Check if AI analysis is enabled
-        if self.enable_ai {
-            println!("🤖 AI inference enabled - using advanced AI analysis");
-            // TODO: Implement actual AI analysis methods here
-            // For now, we'll extend the rule-based analysis with AI-enhanced patterns
-            issues.extend(self.ai_enhanced_analysis(&request)?);
+        // Use AI-powered analysis with Kalosm (create model per analysis for thread safety)
+        if self.enable_ai && self.model_initialized {
+            println!("🤖 Running AI-powered analysis with Kalosm...");
+            issues.extend(self.ai_analysis(&request).await?);
         } else {
-            println!("🔍 AI inference disabled - using rule-based analysis only");
-            issues.extend(self.rule_based_analysis(&request)?);
+            println!("⚠️ AI analysis not available - no model loaded");
+            // Return empty issues if no AI model is available
         }
 
         if let Some(ref tx) = progress_tx {
@@ -161,568 +189,713 @@ impl AIAnalyzer {
         Ok(issues)
     }
 
-    pub fn rule_based_analysis(&self, request: &AnalysisRequest) -> Result<Vec<Issue>> {
+    /// Helper function to extract code snippet with context
+    fn get_code_snippet_with_context(
+        &self,
+        content: &str,
+        target_line: u32,
+        context_lines: usize,
+    ) -> (String, Option<Vec<String>>) {
+        let lines: Vec<&str> = content.lines().collect();
+        let target_idx = target_line.saturating_sub(1) as usize; // Convert to 0-based index
+        
+        // Clamp target_idx to be within valid range
+        let target_idx = std::cmp::min(target_idx, lines.len().saturating_sub(1));
+        
+        // Get the main offending line
+        let code_snippet = lines.get(target_idx)
+            .map(|&line| line.to_string())
+            .unwrap_or_else(|| "Line not found".to_string());
+        
+        // Get context lines if requested
+        let context = if context_lines > 0 {
+            let start_idx = target_idx.saturating_sub(context_lines);
+            let end_idx = std::cmp::min(target_idx + context_lines + 1, lines.len());
+            
+            // Ensure start_idx <= end_idx
+            let start_idx = std::cmp::min(start_idx, end_idx);
+            
+            let mut context_vec = Vec::new();
+            for (idx, &line) in lines[start_idx..end_idx].iter().enumerate() {
+                let actual_line_num = start_idx + idx + 1;
+                let marker = if actual_line_num == target_line as usize { ">>> " } else { "    " };
+                context_vec.push(format!("{}{:3}: {}", marker, actual_line_num, line));
+            }
+            Some(context_vec)
+        } else {
+            None
+        };
+        
+        (code_snippet, context)
+    }
+
+    /// Helper function to create an issue with code snippet
+    fn create_issue_with_snippet(
+        &self,
+        request: &AnalysisRequest,
+        line_number: u32,
+        severity: &str,
+        category: &str,
+        description: &str,
+    ) -> Issue {
+        let (code_snippet, context_lines) = self.get_code_snippet_with_context(&request.content, line_number, 2);
+        
+        Issue {
+            file: request.file_path.clone(),
+            line: line_number,
+            severity: severity.to_string(),
+            category: category.to_string(),
+            description: description.to_string(),
+            commit_status: request.commit_status.clone(),
+            code_snippet,
+            context_lines,
+        }
+    }
+
+    /// AI-powered analysis using Kalosm for comprehensive code review
+    pub async fn ai_analysis(&self, request: &AnalysisRequest) -> Result<Vec<Issue>> {
+        let mut issues = Vec::new();
+        
+        // Use the stored model instance instead of creating a new one
+        let model = match &self.model {
+            Some(model) => {
+                println!("🤖 Using shared AI model for analysis...");
+                model
+            }
+            None => {
+                println!("⚠️  No AI model available for analysis");
+                return Ok(issues);
+            }
+        };
+        
+        // Analyze code in smaller chunks to reduce memory pressure and avoid token limits
+        let lines: Vec<&str> = request.content.lines().collect();
+        let chunk_size = 30; // Reduced from 50 to 30 lines for better stability
+        
+        for (chunk_start, chunk) in lines.chunks(chunk_size).enumerate() {
+            let chunk_start_line = chunk_start * chunk_size + 1;
+            let chunk_content = chunk.join("\n");
+            
+            // Skip empty chunks or very small chunks
+            if chunk_content.trim().is_empty() || chunk_content.trim().lines().count() < 3 {
+                continue;
+            }
+            
+            // Add a small delay between chunks to prevent overwhelming the model
+            if chunk_start > 0 {
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            }
+            
+            match self.analyze_code_chunk(
+                &model,
+                &chunk_content,
+                &request.language,
+                &request.file_path,
+                chunk_start_line,
+            ).await {
+                Ok(analysis_results) => {
+                    issues.extend(analysis_results.into_iter().map(|mut issue| {
+                        issue.commit_status = request.commit_status.clone();
+                        issue
+                    }));
+                }
+                Err(e) => {
+                    println!("⚠️  Skipping chunk {} due to analysis error: {}", chunk_start + 1, e);
+                    // Continue with next chunk instead of failing entire analysis
+                }
+            }
+        }
+        
+        Ok(issues)
+    }
+
+    /// Analyze a chunk of code using structured generation with clear formatting
+    async fn analyze_code_chunk_structured(
+        &self,
+        model: &Llama,
+        code_chunk: &str,
+        language: &str,
+        file_path: &str,
+        start_line: usize,
+    ) -> Result<Vec<Issue>> {
+        let analysis_prompt = format!(r#"Analyze this {} code for issues. Return findings in this exact structured format:
+
+Code to analyze:
+{}
+
+For each issue found, use this exact format:
+ISSUE_START
+Line: [number]
+Severity: [Critical|High|Medium|Low]
+Category: [Security|Performance|Code Quality|Best Practices]
+Description: [brief description of the issue]
+Code: [the problematic code snippet]
+Suggestion: [improved code suggestion]
+Explanation: [why this improvement is better]
+ISSUE_END
+
+If no issues found, respond with: NO_ISSUES_FOUND
+
+Separate multiple issues with ISSUE_START/ISSUE_END blocks."#, language, code_chunk);
+
+        println!("🤖 Running structured analysis with clear formatting...");
+
+        let task = model.task("You are a code review expert. Analyze code and return structured findings using the exact format specified.");
+
+        let stream = task.run(&analysis_prompt);
+
+        // Stream the response and get the complete text
+        let response = tokio::time::timeout(
+            std::time::Duration::from_secs(60),
+            self.time_stream_silent(stream)
+        ).await
+        .map_err(|_| anyhow::anyhow!("AI analysis timeout after 60 seconds"))?
+        .map_err(|e| anyhow::anyhow!("AI streaming error: {}", e))?;
+
+        println!("✅ Got structured response: {} chars", response.len());
+
+        // Parse the structured response
+        self.parse_structured_response(&response, file_path, start_line, code_chunk)
+    }
+
+    /// Parse structured response with clear ISSUE_START/ISSUE_END markers
+    fn parse_structured_response(
+        &self,
+        response: &str,
+        file_path: &str,
+        start_line: usize,
+        code_chunk: &str,
+    ) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
 
-        for (line_num, line) in request.content.lines().enumerate() {
-            let line_number = line_num + 1;
-            let line_lower = line.to_lowercase();
+        // Check for no issues response
+        if response.trim().contains("NO_ISSUES_FOUND") {
+            println!("ℹ️  No issues found in this code chunk");
+            return Ok(issues);
+        }
 
-            // SECURITY PATTERNS
+        // Split response into issue blocks
+        let issue_blocks: Vec<&str> = response
+            .split("ISSUE_START")
+            .skip(1) // Skip content before first ISSUE_START
+            .filter_map(|block| {
+                block.split("ISSUE_END").next() // Take content before ISSUE_END
+            })
+            .collect();
 
-            // Hardcoded credentials
-            if (line_lower.contains("password")
-                || line_lower.contains("api_key")
-                || line_lower.contains("secret"))
-                && line.contains("=")
-                && (line.contains("\"") || line.contains("'"))
-            {
-                issues.push(Issue {
-                    file: request.file_path.clone(),
-                    line: line_number,
-                    severity: "Critical".to_string(),
-                    category: "Security".to_string(),
-                    description: "Hardcoded credentials detected - use environment variables"
-                        .to_string(),
-                    commit_status: request.commit_status.clone(),
-                });
-            }
+        println!("📋 Found {} issue blocks to parse", issue_blocks.len());
 
-            // Code injection
-            if line.contains("eval(") || line.contains("exec(") {
-                issues.push(Issue {
-                    file: request.file_path.clone(),
-                    line: line_number,
-                    severity: "Critical".to_string(),
-                    category: "Security".to_string(),
-                    description: "Code injection vulnerability - avoid eval/exec".to_string(),
-                    commit_status: request.commit_status.clone(),
-                });
-            }
-
-            // SQL injection patterns
-            if line.contains("query")
-                && line.contains("format!")
-                && (line.contains("SELECT") || line.contains("INSERT") || line.contains("UPDATE"))
-            {
-                issues.push(Issue {
-                    file: request.file_path.clone(),
-                    line: line_number,
-                    severity: "Critical".to_string(),
-                    category: "Security".to_string(),
-                    description: "Potential SQL injection - use parameterized queries".to_string(),
-                    commit_status: request.commit_status.clone(),
-                });
-            }
-
-            // Command injection patterns
-            if (line.contains("Command::new")
-                || line.contains("subprocess")
-                || line.contains("system("))
-                && (line.contains("format!")
-                    || line.contains("user_input")
-                    || line.contains("args"))
-            {
-                issues.push(Issue {
-                    file: request.file_path.clone(),
-                    line: line_number,
-                    severity: "Critical".to_string(),
-                    category: "Security".to_string(),
-                    description: "Command injection vulnerability - sanitize inputs".to_string(),
-                    commit_status: request.commit_status.clone(),
-                });
-            }
-
-            // Path traversal patterns
-            if line.contains("../")
-                && (line.contains("read") || line.contains("open") || line.contains("file"))
-            {
-                issues.push(Issue {
-                    file: request.file_path.clone(),
-                    line: line_number,
-                    severity: "High".to_string(),
-                    category: "Security".to_string(),
-                    description: "Path traversal vulnerability - validate file paths".to_string(),
-                    commit_status: request.commit_status.clone(),
-                });
-            }
-
-            // PERFORMANCE PATTERNS
-
-            // Nested loops (O(n²) complexity)
-            if line.contains("for") && line.trim().starts_with("for") {
-                // Check if there's another for loop nearby (simple heuristic)
-                let lines: Vec<&str> = request.content.lines().collect();
-                for (idx, _) in lines
-                    .iter()
-                    .enumerate()
-                    .take(std::cmp::min(line_num + 10, lines.len()))
-                    .skip(line_num + 1)
-                {
-                    if lines[idx].trim().starts_with("for") {
-                        issues.push(Issue {
-                            file: request.file_path.clone(),
-                            line: line_number,
-                            severity: "Medium".to_string(),
-                            category: "Performance".to_string(),
-                            description: "Nested loops detected - consider optimization"
-                                .to_string(),
-                            commit_status: request.commit_status.clone(),
-                        });
-                        break;
-                    }
-                }
-            }
-
-            // Language-specific analysis
-            match request.language.as_str() {
-                "rust" => {
-                    // Security
-                    if line.contains("unsafe") {
-                        issues.push(Issue {
-                            file: request.file_path.clone(),
-                            line: line_number,
-                            severity: "High".to_string(),
-                            category: "Security".to_string(),
-                            description: "Unsafe code block - requires justification and review"
-                                .to_string(),
-                            commit_status: request.commit_status.clone(),
-                        });
-                    }
-
-                    if line.contains("std::ptr::null") {
-                        issues.push(Issue {
-                            file: request.file_path.clone(),
-                            line: line_number,
-                            severity: "Critical".to_string(),
-                            category: "Security".to_string(),
-                            description: "Null pointer dereference - will cause segfault"
-                                .to_string(),
-                            commit_status: request.commit_status.clone(),
-                        });
-                    }
-
-                    // Error handling
-                    if line.contains("unwrap()") && !line.contains("expect(") {
-                        issues.push(Issue {
-                            file: request.file_path.clone(),
-                            line: line_number,
-                            severity: "Medium".to_string(),
-                            category: "Error Handling".to_string(),
-                            description:
-                                "Use expect() or proper error handling instead of unwrap()"
-                                    .to_string(),
-                            commit_status: request.commit_status.clone(),
-                        });
-                    }
-
-                    // Performance
-                    if line.contains(".clone()") && line.contains("&") {
-                        issues.push(Issue {
-                            file: request.file_path.clone(),
-                            line: line_number,
-                            severity: "Low".to_string(),
-                            category: "Performance".to_string(),
-                            description: "Unnecessary clone - consider borrowing instead"
-                                .to_string(),
-                            commit_status: request.commit_status.clone(),
-                        });
-                    }
-                }
-                "python" => {
-                    // Security
-                    if line.contains("pickle.loads") && !line.contains("trusted") {
-                        issues.push(Issue {
-                            file: request.file_path.clone(),
-                            line: line_number,
-                            severity: "Critical".to_string(),
-                            category: "Security".to_string(),
-                            description: "Unsafe deserialization - pickle.loads is dangerous"
-                                .to_string(),
-                            commit_status: request.commit_status.clone(),
-                        });
-                    }
-
-                    if line.contains("yaml.load") && !line.contains("safe_load") {
-                        issues.push(Issue {
-                            file: request.file_path.clone(),
-                            line: line_number,
-                            severity: "High".to_string(),
-                            category: "Security".to_string(),
-                            description: "Use yaml.safe_load instead of yaml.load".to_string(),
-                            commit_status: request.commit_status.clone(),
-                        });
-                    }
-
-                    // Performance
-                    if line.contains("+=") && (line.contains("\"") || line.contains("'")) {
-                        issues.push(Issue {
-                            file: request.file_path.clone(),
-                            line: line_number,
-                            severity: "Medium".to_string(),
-                            category: "Performance".to_string(),
-                            description:
-                                "String concatenation in loop - use join() for better performance"
-                                    .to_string(),
-                            commit_status: request.commit_status.clone(),
-                        });
-                    }
-                }
-                "javascript" | "typescript" => {
-                    // Security
-                    if line.contains("innerHTML") && line.contains("+") {
-                        issues.push(Issue {
-                            file: request.file_path.clone(),
-                            line: line_number,
-                            severity: "High".to_string(),
-                            category: "Security".to_string(),
-                            description: "XSS vulnerability - validate before setting innerHTML"
-                                .to_string(),
-                            commit_status: request.commit_status.clone(),
-                        });
-                    }
-
-                    // Performance
-                    if line.contains("document.getElementById") && line.contains("for") {
-                        issues.push(Issue {
-                            file: request.file_path.clone(),
-                            line: line_number,
-                            severity: "Medium".to_string(),
-                            category: "Performance".to_string(),
-                            description: "DOM query in loop - cache the element reference"
-                                .to_string(),
-                            commit_status: request.commit_status.clone(),
-                        });
-                    }
-                }
-                _ => {}
-            }
-
-            // CODE QUALITY PATTERNS
-
-            if line.contains("TODO") || line.contains("FIXME") || line.contains("HACK") {
-                issues.push(Issue {
-                    file: request.file_path.clone(),
-                    line: line_number,
-                    severity: "Low".to_string(),
-                    category: "Code Quality".to_string(),
-                    description: "Code comment indicates incomplete implementation".to_string(),
-                    commit_status: request.commit_status.clone(),
-                });
-            }
-
-            // Long line detection
-            if line.len() > 120 {
-                issues.push(Issue {
-                    file: request.file_path.clone(),
-                    line: line_number,
-                    severity: "Low".to_string(),
-                    category: "Code Quality".to_string(),
-                    description: format!(
-                        "Line too long ({} chars) - consider breaking into multiple lines",
-                        line.len()
-                    ),
-                    commit_status: request.commit_status.clone(),
-                });
+        for (i, block) in issue_blocks.iter().enumerate() {
+            if let Some(issue) = self.parse_issue_block(block, file_path, start_line, code_chunk) {
+                let severity = issue.severity.clone();
+                let category = issue.category.clone();
+                issues.push(issue);
+                println!("✅ Parsed issue {}: {} - {}", i + 1, severity, category);
+            } else {
+                println!("⚠️  Failed to parse issue block {}", i + 1);
             }
         }
 
         Ok(issues)
     }
 
-    fn ai_enhanced_analysis(&self, request: &AnalysisRequest) -> Result<Vec<Issue>> {
+    /// Parse a single issue block
+    fn parse_issue_block(
+        &self,
+        block: &str,
+        file_path: &str,
+        start_line: usize,
+        code_chunk: &str,
+    ) -> Option<Issue> {
+        let mut line_num = 1u32;
+        let mut severity = "Medium".to_string();
+        let mut category = "Code Quality".to_string();
+        let mut description = "Code quality issue detected".to_string();
+        let mut code_snippet = "".to_string();
+        let mut suggestion = "".to_string();
+        let mut explanation = "".to_string();
+
+        for line in block.lines() {
+            let line = line.trim();
+            if line.starts_with("Line:") {
+                if let Some(num_str) = line.strip_prefix("Line:").map(str::trim) {
+                    line_num = num_str.parse().unwrap_or(1);
+                }
+            } else if line.starts_with("Severity:") {
+                if let Some(sev) = line.strip_prefix("Severity:").map(str::trim) {
+                    severity = sev.to_string();
+                }
+            } else if line.starts_with("Category:") {
+                if let Some(cat) = line.strip_prefix("Category:").map(str::trim) {
+                    category = cat.to_string();
+                }
+            } else if line.starts_with("Description:") {
+                if let Some(desc) = line.strip_prefix("Description:").map(str::trim) {
+                    description = desc.to_string();
+                }
+            } else if line.starts_with("Code:") {
+                if let Some(code) = line.strip_prefix("Code:").map(str::trim) {
+                    code_snippet = code.to_string();
+                }
+            } else if line.starts_with("Suggestion:") {
+                if let Some(sugg) = line.strip_prefix("Suggestion:").map(str::trim) {
+                    suggestion = sugg.to_string();
+                }
+            } else if line.starts_with("Explanation:") {
+                if let Some(exp) = line.strip_prefix("Explanation:").map(str::trim) {
+                    explanation = exp.to_string();
+                }
+            }
+        }
+
+        // Skip issues with empty descriptions
+        if description.trim().is_empty() {
+            return None;
+        }
+
+        // Adjust line number to absolute position in file
+        let absolute_line = start_line as u32 + line_num.saturating_sub(1);
+
+        // Get code snippet with context if not provided
+        let actual_code_snippet = if code_snippet.is_empty() {
+            let (snippet, _) = self.get_code_snippet_with_context(code_chunk, line_num, 2);
+            snippet
+        } else {
+            code_snippet
+        };
+
+        // Enhanced description with improvement suggestions
+        let enhanced_description = if !suggestion.is_empty() && !explanation.is_empty() {
+            format!("{}\n\n**Suggested Improvement:**\n```\n{}\n```\n\n**Explanation:** {}",
+                    description, suggestion, explanation)
+        } else {
+            description
+        };
+
+        Some(Issue {
+            file: file_path.to_string(),
+            line: absolute_line,
+            severity,
+            category,
+            description: enhanced_description,
+            commit_status: CommitStatus::Modified, // Will be overridden
+            code_snippet: actual_code_snippet,
+            context_lines: None,
+        })
+    }
+
+    /// Analyze a chunk of code using AI with comprehensive prompts
+    async fn analyze_code_chunk(
+        &self,
+        model: &Llama,
+        code_chunk: &str,
+        language: &str,
+        file_path: &str,
+        start_line: usize,
+    ) -> Result<Vec<Issue>> {
+        // Try structured analysis first, fall back to JSON parsing if it fails
+        match self.analyze_code_chunk_structured(model, code_chunk, language, file_path, start_line).await {
+            Ok(issues) => Ok(issues),
+            Err(e) => {
+                println!("⚠️  Structured analysis failed ({}), trying JSON parsing approach...", e);
+                // Fallback to the original approach
+                match self.try_ai_analysis(model, code_chunk, language, file_path, start_line, false).await {
+                    Ok(issues) => Ok(issues),
+                    Err(e2) => {
+                        println!("⚠️  JSON parsing also failed ({}), trying simplified analysis...", e2);
+                        match self.try_ai_analysis(model, code_chunk, language, file_path, start_line, true).await {
+                            Ok(issues) => Ok(issues),
+                            Err(e3) => {
+                                println!("⚠️  All analysis methods failed ({}), skipping AI analysis for this chunk", e3);
+                                Ok(Vec::new()) // Return empty instead of failing
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Try AI analysis with optional simplified prompt
+    async fn try_ai_analysis(
+        &self,
+        model: &Llama,
+        code_chunk: &str,
+        language: &str,
+        file_path: &str,
+        start_line: usize,
+        simplified: bool,
+    ) -> Result<Vec<Issue>> {
+        let analysis_prompt = if simplified {
+            self.create_simple_analysis_prompt(code_chunk, language)
+        } else {
+            self.create_comprehensive_analysis_prompt(code_chunk, language)
+        };
+        
+        println!("🤖 Sending prompt to model (simplified={})", simplified);
+        
+        // Create a task for AI analysis
+        let task = model.task("You are a code review expert. Analyze code and return findings in valid JSON format only.");
+        let stream = task.run(&analysis_prompt);
+        
+        // Stream the response and get the complete text
+        let response = tokio::time::timeout(
+            std::time::Duration::from_secs(60),
+            self.time_stream(stream)
+        ).await
+        .map_err(|_| anyhow::anyhow!("AI analysis timeout after 60 seconds"))?
+        .map_err(|e| anyhow::anyhow!("AI streaming error: {}", e))?;
+        
+        println!("✅ Got response from model: {} chars", response.len());
+        
+        // Check response quality
+        if response.trim().is_empty() {
+            return Err(anyhow::anyhow!("Empty response from AI model"));
+        }
+        
+        if response.contains("No token sampled") {
+            return Err(anyhow::anyhow!("AI model token sampling failed"));
+        }
+        
+        // Parse the AI response to extract issues
+        self.parse_ai_response(&response, file_path, start_line, code_chunk)
+    }
+
+    /// Create a comprehensive analysis prompt covering OWASP and best practices
+    fn create_comprehensive_analysis_prompt(&self, code: &str, language: &str) -> String {
+        format!(r#"Perform a comprehensive code review of this {} code. Check for OWASP security vulnerabilities, performance issues, and coding best practices. Include specific code examples.
+
+Return your analysis as a JSON object with this exact structure:
+{{
+    "issues": [
+        {{
+            "line": 1,
+            "severity": "High|Medium|Low",
+            "category": "Security|Performance|Code Quality|Best Practices",
+            "description": "Brief description of the issue",
+            "code_snippet": "The problematic code snippet",
+            "improvement_example": "Suggested improved code",
+            "explanation": "Why this improvement is better"
+        }}
+    ]
+}}
+
+Code to analyze:
+{}"#, language, code)
+    }
+
+    /// Create a simplified analysis prompt for fallback when comprehensive analysis fails
+    fn create_simple_analysis_prompt(&self, code: &str, language: &str) -> String {
+        format!(r#"Do a code review of this {} code including OWASP and other security concerns.
+
+Return your analysis as a JSON object with this exact structure:
+{{
+    "issues": [
+        {{
+            "line": 1,
+            "severity": "High|Medium|Low",
+            "category": "Security|Performance|Code Quality|Best Practices",
+            "description": "Brief description of the issue",
+            "code_snippet": "The problematic code snippet",
+            "improvement_example": "Suggested improved code",
+            "explanation": "Why this improvement is better"
+        }}
+    ]
+}}
+
+Code to analyze:
+{}"#, language, code)
+    }
+
+    /// Create a mock AI response for testing the analysis pipeline
+    fn create_mock_ai_response(&self, _code_chunk: &str, language: &str, _file_path: &str) -> String {
+        format!(r#"{{
+            "issues": [
+                {{
+                    "category": "Security",
+                    "description": "Potential buffer overflow vulnerability detected in {} code",
+                    "severity": "High",
+                    "line_number": 42,
+                    "suggestion": "Consider using bounds checking or safe string functions to prevent buffer overflows",
+                    "improvement_example": "Replace strcpy() with strncpy() or use std::string for safer memory management"
+                }},
+                {{
+                    "category": "Code Quality", 
+                    "description": "Function complexity is high, consider refactoring",
+                    "severity": "Medium",
+                    "line_number": 15,
+                    "suggestion": "Break down large functions into smaller, more focused functions following the Single Responsibility Principle",
+                    "improvement_example": "Extract validation logic into separate validate_input() function and error handling into handle_error() function"
+                }},
+                {{
+                    "category": "OWASP",
+                    "description": "Input validation missing for user data",
+                    "severity": "High", 
+                    "line_number": 8,
+                    "suggestion": "Implement proper input validation and sanitization to prevent injection attacks",
+                    "improvement_example": "Use parameterized queries for database operations and escape special characters in user input"
+                }}
+            ]
+        }}"#, language)
+    }
+
+    /// Parse AI response and convert to Issue structs
+    fn parse_ai_response(
+        &self,
+        response: &str,
+        file_path: &str,
+        start_line: usize,
+        code_chunk: &str,
+    ) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
-
-        // Start with rule-based analysis as foundation
-        issues.extend(self.rule_based_analysis(request)?);
-
-        // Enhanced AI analysis - contextual understanding and deeper patterns
-        let content = &request.content;
-        let lines: Vec<&str> = content.lines().collect();
-
-        // SEMANTIC ANALYSIS PATTERNS
-
-        // Detect architectural patterns and anti-patterns
-        if self.detect_architecture_issues(&lines, request) {
-            issues.push(Issue {
-                file: request.file_path.clone(),
-                line: 1,
-                severity: "Medium".to_string(),
-                category: "Architecture".to_string(),
-                description: "Potential architectural issues detected - consider refactoring"
-                    .to_string(),
-                commit_status: request.commit_status.clone(),
-            });
+        
+        // Clean up response text
+        let cleaned_response = response.trim();
+        
+        // Check for error indicators
+        if cleaned_response.is_empty() {
+            println!("⚠️  Empty response from AI model");
+            return Ok(issues);
         }
-
-        // Analyze code complexity and maintainability
-        let complexity_score = self.calculate_complexity_score(&lines);
-        if complexity_score > 50 {
-            issues.push(Issue {
-                file: request.file_path.clone(),
-                line: 1,
-                severity: "Medium".to_string(),
-                category: "Maintainability".to_string(),
-                description: format!(
-                    "High complexity score ({complexity_score}) - consider breaking into smaller functions"
-                ),
-                commit_status: request.commit_status.clone(),
-            });
+        
+        if cleaned_response.contains("No token sampled") || cleaned_response.len() < 10 {
+            println!("⚠️  Invalid or too short response from AI model");
+            return Ok(issues);
         }
+        
+        // Try to extract JSON from response (handle markdown code blocks and extra text)
+        let json_content = if let Some(json_start) = cleaned_response.find('{') {
+            if let Some(json_end) = cleaned_response.rfind('}') {
+                let extracted = &cleaned_response[json_start..=json_end];
+                println!("📄 Extracted JSON content: {} chars", extracted.len());
+                extracted
+            } else {
+                println!("⚠️  Found JSON start but no end brace");
+                cleaned_response
+            }
+        } else {
+            println!("⚠️  No JSON object found in response, trying raw response");
+            cleaned_response
+        };
+        
+        // Try to parse JSON response
+        match serde_json::from_str::<serde_json::Value>(json_content) {
+            Ok(parsed) => {
+                println!("✅ Successfully parsed JSON response");
+                if let Some(issues_array) = parsed.get("issues").and_then(|v| v.as_array()) {
+                    println!("📋 Found {} issues in response", issues_array.len());
+                    for issue_value in issues_array {
+                        if let Some(issue) = self.parse_single_issue(issue_value, file_path, start_line, code_chunk) {
+                            issues.push(issue);
+                        }
+                    }
+                } else {
+                    println!("⚠️  AI response missing 'issues' array");
+                    println!("🔍 Available keys: {:?}", parsed.as_object().map(|o| o.keys().collect::<Vec<_>>()));
+                }
+            }
+            Err(e) => {
+                println!("⚠️  Failed to parse JSON response ({}), trying text fallback", e);
+                println!("🔍 First 200 chars of response: {}", &json_content.chars().take(200).collect::<String>());
+                // Fallback: parse non-JSON response
+                issues.extend(self.parse_text_response(response, file_path, start_line, code_chunk));
+            }
+        }
+        
+        Ok(issues)
+    }
 
-        // Detect potential race conditions in concurrent code
-        if self.detect_race_conditions(&lines, request) {
+    /// Parse a single issue from JSON
+    fn parse_single_issue(
+        &self,
+        issue_value: &serde_json::Value,
+        file_path: &str,
+        start_line: usize,
+        code_chunk: &str,
+    ) -> Option<Issue> {
+        // Get required fields with fallbacks
+        let line = issue_value.get("line")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(1) as u32;
+            
+        let severity = issue_value.get("severity")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Medium")
+            .to_string();
+            
+        let category = issue_value.get("category")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Code Quality")
+            .to_string();
+            
+        let description = issue_value.get("description")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Code quality issue detected")
+            .to_string();
+            
+        // Skip issues with empty descriptions
+        if description.trim().is_empty() {
+            return None;
+        }
+            
+        let code_snippet = issue_value.get("code_snippet")
+            .and_then(|v| v.as_str())
+            .unwrap_or("(code snippet not provided)")
+            .to_string();
+            
+        let improvement_example = issue_value.get("improvement_example")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+            
+        let explanation = issue_value.get("explanation")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        // Adjust line number to absolute position in file
+        let absolute_line = start_line as u32 + line.saturating_sub(1);
+        
+        // Get code snippet with context
+        let (actual_code_snippet, context_lines) = self.get_code_snippet_with_context(code_chunk, line, 2);
+        
+        // Enhanced description with improvement suggestions
+        let enhanced_description = if !improvement_example.is_empty() && !explanation.is_empty() {
+            format!("{}\n\n**Suggested Improvement:**\n```\n{}\n```\n\n**Explanation:** {}", 
+                    description, improvement_example, explanation)
+        } else {
+            description
+        };
+
+        Some(Issue {
+            file: file_path.to_string(),
+            line: absolute_line,
+            severity,
+            category,
+            description: enhanced_description,
+            commit_status: crate::core::review::CommitStatus::Modified, // Will be overridden
+            code_snippet: if code_snippet.is_empty() { actual_code_snippet } else { code_snippet },
+            context_lines,
+        })
+    }
+
+    /// Fallback parser for non-JSON responses
+    fn parse_text_response(
+        &self,
+        response: &str,
+        file_path: &str,
+        start_line: usize,
+        code_chunk: &str,
+    ) -> Vec<Issue> {
+        let mut issues = Vec::new();
+        
+        // Try to extract meaningful issues from text response
+        let lower_response = response.to_lowercase();
+        
+        // Look for security-related issues
+        if lower_response.contains("security") || lower_response.contains("vulnerability") 
+            || lower_response.contains("password") || lower_response.contains("injection") {
+            let (code_snippet, context_lines) = self.get_code_snippet_with_context(code_chunk, 1u32, 2);
+            
+            // Extract the first line that mentions security as description
+            let description = response.lines()
+                .find(|line| {
+                    let lower_line = line.to_lowercase();
+                    lower_line.contains("security") || lower_line.contains("vulnerability") 
+                        || lower_line.contains("password") || lower_line.contains("injection")
+                })
+                .map(|line| line.trim())
+                .unwrap_or("Security concern detected by AI analysis")
+                .to_string();
+            
             issues.push(Issue {
-                file: request.file_path.clone(),
-                line: 1,
+                file: file_path.to_string(),
+                line: start_line as u32,
                 severity: "High".to_string(),
-                category: "Concurrency".to_string(),
-                description: "Potential race condition detected - review shared state access"
-                    .to_string(),
-                commit_status: request.commit_status.clone(),
+                category: "Security".to_string(),
+                description,
+                commit_status: crate::core::review::CommitStatus::Modified,
+                code_snippet,
+                context_lines,
             });
         }
-
-        // Analyze error handling patterns
-        if self.detect_error_handling_issues(&lines, request) {
+        
+        // Look for performance issues
+        if lower_response.contains("performance") || lower_response.contains("inefficient") 
+            || lower_response.contains("optimization") || lower_response.contains("slow") {
+            let (code_snippet, context_lines) = self.get_code_snippet_with_context(code_chunk, 1u32, 2);
+            
+            let description = response.lines()
+                .find(|line| {
+                    let lower_line = line.to_lowercase();
+                    lower_line.contains("performance") || lower_line.contains("inefficient") 
+                        || lower_line.contains("optimization") || lower_line.contains("slow")
+                })
+                .map(|line| line.trim())
+                .unwrap_or("Performance issue detected by AI analysis")
+                .to_string();
+            
             issues.push(Issue {
-                file: request.file_path.clone(),
-                line: 1,
-                severity: "Medium".to_string(),
-                category: "Error Handling".to_string(),
-                description: "Inconsistent error handling patterns - standardize approach"
-                    .to_string(),
-                commit_status: request.commit_status.clone(),
-            });
-        }
-
-        // Performance analysis with context awareness
-        if self.detect_performance_issues(&lines, request) {
-            issues.push(Issue {
-                file: request.file_path.clone(),
-                line: 1,
+                file: file_path.to_string(),
+                line: start_line as u32,
                 severity: "Medium".to_string(),
                 category: "Performance".to_string(),
-                description: "Performance optimization opportunities identified".to_string(),
-                commit_status: request.commit_status.clone(),
+                description,
+                commit_status: crate::core::review::CommitStatus::Modified,
+                code_snippet,
+                context_lines,
             });
         }
-
-        Ok(issues)
-    }
-
-    fn detect_architecture_issues(&self, lines: &[&str], request: &AnalysisRequest) -> bool {
-        let mut method_count = 0;
-        let mut field_count = 0;
-
-        for line in lines {
-            let trimmed = line.trim();
-            match request.language.as_str() {
-                "rust" => {
-                    if trimmed.starts_with("fn ") {
-                        method_count += 1;
-                    }
-                    if trimmed.starts_with("let ")
-                        || trimmed.starts_with("const ")
-                        || trimmed.contains(": ")
-                    {
-                        field_count += 1;
-                    }
-                }
-                "python" => {
-                    if trimmed.starts_with("def ") {
-                        method_count += 1;
-                    }
-                    if trimmed.starts_with("self.") && trimmed.contains("=") {
-                        field_count += 1;
-                    }
-                }
-                "javascript" | "typescript" => {
-                    if trimmed.contains("function ")
-                        || (trimmed.contains("=>") && trimmed.contains("{"))
-                    {
-                        method_count += 1;
-                    }
-                    if trimmed.contains("this.") && trimmed.contains("=") {
-                        field_count += 1;
-                    }
-                }
-                _ => {}
-            }
+        
+        // Look for error handling issues
+        if lower_response.contains("error") || lower_response.contains("unwrap") 
+            || lower_response.contains("panic") || lower_response.contains("exception") {
+            let (code_snippet, context_lines) = self.get_code_snippet_with_context(code_chunk, 1u32, 2);
+            
+            let description = response.lines()
+                .find(|line| {
+                    let lower_line = line.to_lowercase();
+                    lower_line.contains("error") || lower_line.contains("unwrap") 
+                        || lower_line.contains("panic") || lower_line.contains("exception")
+                })
+                .map(|line| line.trim())
+                .unwrap_or("Error handling issue detected by AI analysis")
+                .to_string();
+            
+            issues.push(Issue {
+                file: file_path.to_string(),
+                line: start_line as u32,
+                severity: "Medium".to_string(),
+                category: "Error Handling".to_string(),
+                description,
+                commit_status: crate::core::review::CommitStatus::Modified,
+                code_snippet,
+                context_lines,
+            });
         }
-
-        // God class detection: too many methods and fields
-        method_count > 20 || field_count > 15
-    }
-
-    fn calculate_complexity_score(&self, lines: &[&str]) -> u32 {
-        let mut score = 0u32;
-
-        for line in lines {
-            let trimmed = line.trim();
-
-            // Control flow increases complexity
-            if trimmed.starts_with("if ")
-                || trimmed.starts_with("else")
-                || trimmed.starts_with("for ")
-                || trimmed.starts_with("while ")
-                || trimmed.starts_with("match ")
-                || trimmed.starts_with("switch")
-            {
-                score += 2;
-            }
-
-            // Nested structures increase complexity more
-            let indent_level = line.len() - line.trim_start().len();
-            if indent_level > 8 {
-                score += 1;
-            }
-
-            // Exception handling
-            if trimmed.contains("catch") || trimmed.contains("except") || trimmed.contains("rescue")
-            {
-                score += 1;
-            }
+        
+        // If we found no specific issues but got a response, create a generic issue
+        if issues.is_empty() && response.len() > 50 {
+            let (code_snippet, context_lines) = self.get_code_snippet_with_context(code_chunk, 1u32, 2);
+            
+            // Take the first meaningful line as description
+            let description = response.lines()
+                .find(|line| line.trim().len() > 10 && !line.starts_with('{') && !line.starts_with('}'))
+                .map(|line| line.trim())
+                .unwrap_or("Code quality issue detected by AI analysis")
+                .to_string();
+            
+            issues.push(Issue {
+                file: file_path.to_string(),
+                line: start_line as u32,
+                severity: "Low".to_string(),
+                category: "Code Quality".to_string(),
+                description,
+                commit_status: crate::core::review::CommitStatus::Modified,
+                code_snippet,
+                context_lines,
+            });
         }
-
-        score
-    }
-
-    fn detect_race_conditions(&self, lines: &[&str], request: &AnalysisRequest) -> bool {
-        let mut has_shared_state = false;
-        let mut has_concurrent_access = false;
-
-        for line in lines {
-            let trimmed = line.trim().to_lowercase();
-
-            match request.language.as_str() {
-                "rust" => {
-                    // Shared state indicators
-                    if trimmed.contains("arc<")
-                        || trimmed.contains("mutex")
-                        || trimmed.contains("rwlock")
-                        || trimmed.contains("static mut")
-                    {
-                        has_shared_state = true;
-                    }
-
-                    // Concurrent access indicators
-                    if trimmed.contains("tokio::spawn")
-                        || trimmed.contains("thread::spawn")
-                        || trimmed.contains("async")
-                    {
-                        has_concurrent_access = true;
-                    }
-                }
-                "python" => {
-                    if trimmed.contains("threading")
-                        || trimmed.contains("multiprocessing")
-                        || trimmed.contains("asyncio")
-                    {
-                        has_concurrent_access = true;
-                    }
-                    if trimmed.contains("global") || trimmed.contains("shared") {
-                        has_shared_state = true;
-                    }
-                }
-                "javascript" | "typescript" => {
-                    if trimmed.contains("worker")
-                        || trimmed.contains("promise")
-                        || trimmed.contains("async")
-                    {
-                        has_concurrent_access = true;
-                    }
-                    if trimmed.contains("window.") || trimmed.contains("global") {
-                        has_shared_state = true;
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        has_shared_state && has_concurrent_access
-    }
-
-    fn detect_error_handling_issues(&self, lines: &[&str], request: &AnalysisRequest) -> bool {
-        let mut error_patterns = Vec::new();
-        let mut total_lines = 0;
-
-        for line in lines {
-            total_lines += 1;
-            let trimmed = line.trim().to_lowercase();
-
-            match request.language.as_str() {
-                "rust" => {
-                    if trimmed.contains("unwrap()") {
-                        error_patterns.push("unwrap");
-                    }
-                    if trimmed.contains("expect(") {
-                        error_patterns.push("expect");
-                    }
-                    if trimmed.contains("?") {
-                        error_patterns.push("question_mark");
-                    }
-                }
-                "python" => {
-                    if trimmed.contains("except:") || trimmed.contains("except exception") {
-                        error_patterns.push("bare_except");
-                    }
-                    if trimmed.contains("raise") {
-                        error_patterns.push("raise");
-                    }
-                }
-                "javascript" | "typescript" => {
-                    if trimmed.contains("throw") {
-                        error_patterns.push("throw");
-                    }
-                    if trimmed.contains("catch") && trimmed.contains("console.error") {
-                        error_patterns.push("console_error");
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        // Check for inconsistent error handling patterns
-        let unique_patterns: std::collections::HashSet<_> = error_patterns.into_iter().collect();
-        unique_patterns.len() > 2 && total_lines > 50
-    }
-
-    fn detect_performance_issues(&self, lines: &[&str], request: &AnalysisRequest) -> bool {
-        let mut performance_concerns = 0;
-
-        for line in lines {
-            let trimmed = line.trim().to_lowercase();
-
-            match request.language.as_str() {
-                "rust" => {
-                    // Memory allocations in loops
-                    if trimmed.contains("vec!") && trimmed.contains("for ") {
-                        performance_concerns += 1;
-                    }
-                    // String concatenation in loops
-                    if trimmed.contains("push_str") && trimmed.contains("for ") {
-                        performance_concerns += 1;
-                    }
-                }
-                "python" => {
-                    // List comprehensions that could be generators
-                    if trimmed.contains("[") && trimmed.contains("for ") && trimmed.contains("in ")
-                    {
-                        performance_concerns += 1;
-                    }
-                }
-                "javascript" | "typescript" => {
-                    // DOM manipulation in loops
-                    if trimmed.contains("getelement") && trimmed.contains("for ") {
-                        performance_concerns += 1;
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        performance_concerns > 2
+        
+        issues
     }
 
     fn detect_language(&self, file_path: &str) -> String {
@@ -741,6 +914,40 @@ impl AIAnalyzer {
             Some("cs") => "csharp".to_string(),
             _ => "unknown".to_string(),
         }
+    }
+
+    /// Stream and time the AI response, returning the complete text
+    async fn time_stream(&self, mut stream: impl TextStream + Unpin) -> Result<String> {
+        let start_time = std::time::Instant::now();
+        let mut tokens = 0;
+        let mut result = String::new();
+        
+        while let Some(token) = stream.next().await {
+            tokens += 1;
+            result.push_str(&token);
+            // Removed real-time printing to avoid output during processing
+        }
+        
+        let elapsed = start_time.elapsed();
+        println!("\n\nGenerated {tokens} tokens ({result_len} characters) in {elapsed:?}", 
+                result_len = result.len());
+        println!(
+            "Tokens per second: {:.2}",
+            tokens as f64 / elapsed.as_secs_f64()
+        );
+        
+        Ok(result)
+    }
+
+    /// Stream tokens silently without any output for structured analysis
+    async fn time_stream_silent(&self, mut stream: impl TextStream + Unpin) -> Result<String> {
+        let mut result = String::new();
+        
+        while let Some(token) = stream.next().await {
+            result.push_str(&token);
+        }
+        
+        Ok(result)
     }
 }
 
@@ -762,7 +969,8 @@ mod tests {
     fn test_detect_language_variants() {
         let analyzer = AIAnalyzer {
             backend: GpuBackend::Cpu,
-            enable_ai: true,
+            enable_ai: false,
+            model_initialized: false,
         };
         assert_eq!(analyzer.detect_language("src/main.rs"), "rust");
         assert_eq!(analyzer.detect_language("a/b/c.py"), "python");
@@ -772,96 +980,118 @@ mod tests {
     }
 
     #[test]
-    fn test_rule_based_analysis_rust_patterns() {
+    fn test_ai_analyzer_initialization() {
         let analyzer = AIAnalyzer {
             backend: GpuBackend::Cpu,
             enable_ai: true,
+            model_initialized: true,
         };
-        let content = r#"
-            // SECURITY
-            let password = "secret";
-            let _ = eval("2+2");
-            let query = format!("SELECT * FROM users");
-            std::process::Command::new("sh").arg(format!("{}", user_input));
-            let _ = std::fs::read("../etc/passwd");
-            // PERFORMANCE
-            for i in 0..10 {
-                for j in 0..10 {}
-            }
-            // RUST SPECIFIC
-            unsafe { /* do unsafe things */ }
-            let p = std::ptr::null();
-            let _ = something.unwrap();
-            let _y = &x.clone();
-            // QUALITY
-            // TODO: fix
-            // Long line next
-            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-        "#;
-        let req = make_request("file.rs", content, "rust");
-        let issues = analyzer.rule_based_analysis(&req).unwrap();
-        assert!(!issues.is_empty());
-        // Ensure we hit multiple categories
-        assert!(issues.iter().any(|i| i.category == "Security"));
-        assert!(issues.iter().any(|i| i.category == "Performance"));
-        assert!(issues.iter().any(|i| i.category == "Code Quality"));
+        
+        // Test that analyzer is properly configured
+        assert!(analyzer.enable_ai);
+        assert!(analyzer.model_initialized);
+        assert_eq!(analyzer.backend, GpuBackend::Cpu);
     }
 
     #[test]
-    fn test_rule_based_analysis_python_patterns() {
+    fn test_create_comprehensive_analysis_prompt() {
         let analyzer = AIAnalyzer {
             backend: GpuBackend::Cpu,
             enable_ai: true,
+            model_initialized: true,
         };
-        let content = r#"
-            import pickle
-            data = pickle.loads(b"...")
-            import yaml
-            result = yaml.load("x: 1")
-            s = "";
-            for i in range(10): s += "x"
-        "#;
-        let req = make_request("script.py", content, "python");
-        let issues = analyzer.rule_based_analysis(&req).unwrap();
-        assert!(issues.iter().any(|i| i.category == "Security"));
-        assert!(issues.iter().any(|i| i.category == "Performance"));
+        
+        let prompt = analyzer.create_comprehensive_analysis_prompt(
+            "let password = \"secret\";",
+            "rust"
+        );
+        
+        assert!(prompt.contains("OWASP"));
+        assert!(prompt.contains("security"));
+        assert!(prompt.contains("rust"));
+        assert!(prompt.contains("let password = \"secret\""));
+        assert!(prompt.contains("JSON"));
     }
 
     #[test]
-    fn test_rule_based_analysis_js_patterns() {
+    fn test_parse_ai_response_json() {
         let analyzer = AIAnalyzer {
             backend: GpuBackend::Cpu,
             enable_ai: true,
+            model_initialized: true,
         };
-        let content = r#"
-            let x = "user";
-            element.innerHTML = "<div>" + x;
-            for (let i = 0; i < 10; i++) { document.getElementById("id"); }
-        "#;
-        let req = make_request("script.js", content, "javascript");
-        let issues = analyzer.rule_based_analysis(&req).unwrap();
-        assert!(issues.iter().any(|i| i.category == "Security"));
-        assert!(issues.iter().any(|i| i.category == "Performance"));
-    }
-
-    #[test]
-    fn test_analyze_file_emits_progress_and_issues() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            let analyzer = AIAnalyzer::new(false, true).await.unwrap();
-            let (tx, mut rx) = mpsc::unbounded_channel::<ProgressUpdate>();
-            let req = make_request("file.rs", "let password = \"x\";", "rust");
-            let issues = analyzer.analyze_file(req, Some(tx)).await.unwrap();
-            assert!(!issues.is_empty());
-            // Try receive up to a couple of progress messages (non-blocking)
-            let mut got_any = false;
-            for _ in 0..4 {
-                if rx.try_recv().is_ok() {
-                    got_any = true;
-                    break;
+        
+        let json_response = r#"
+        {
+            "issues": [
+                {
+                    "line": 1,
+                    "severity": "Critical",
+                    "category": "Security",
+                    "description": "Hardcoded credentials detected",
+                    "code_snippet": "let password = \"secret\";",
+                    "improvement_example": "let password = env::var(\"PASSWORD\")?;",
+                    "explanation": "Use environment variables for sensitive data"
                 }
-            }
-            assert!(got_any, "expected at least one progress message");
-        });
+            ]
+        }
+        "#;
+        
+        let code = "let password = \"secret\";";
+        let issues = analyzer.parse_ai_response(json_response, "test.rs", 1, code).unwrap();
+        
+        assert_eq!(issues.len(), 1);
+        assert_eq!(issues[0].severity, "Critical");
+        assert_eq!(issues[0].category, "Security");
+        assert!(issues[0].description.contains("Hardcoded credentials"));
+        assert!(issues[0].description.contains("detected"));
+    }
+
+    #[test]
+    fn test_parse_ai_response_fallback() {
+        let analyzer = AIAnalyzer {
+            backend: GpuBackend::Cpu,
+            enable_ai: true,
+            model_initialized: true,
+        };
+        
+        let text_response = "This code has a security vulnerability in the password handling.";
+        let code = "let password = \"secret\";";
+        let issues = analyzer.parse_ai_response(text_response, "test.rs", 1, code).unwrap();
+        
+        assert_eq!(issues.len(), 1);
+        assert_eq!(issues[0].category, "Security");
+        assert!(issues[0].description.contains("security concern"));
+    }
+
+    #[test]
+    fn test_get_code_snippet_with_context() {
+        let analyzer = AIAnalyzer {
+            backend: GpuBackend::Cpu,
+            enable_ai: true,
+            model_initialized: true,
+        };
+        
+        let code = "line1\nline2\nline3\nline4\nline5";
+        let (snippet, context) = analyzer.get_code_snippet_with_context(code, 3u32, 1);
+        
+        assert_eq!(snippet, "line3");
+        assert!(context.is_some());
+        let context_lines = context.unwrap();
+        assert!(context_lines.len() > 0);
+        assert!(context_lines.iter().any(|line| line.contains(">>> ")));
+    }
+
+    #[tokio::test]
+    async fn test_analyze_file_without_ai() {
+        let analyzer = AIAnalyzer {
+            backend: GpuBackend::Cpu,
+            enable_ai: false,
+            model_initialized: false,
+        };
+        
+        let req = make_request("file.rs", "let password = \"secret\";", "rust");
+        let issues = analyzer.analyze_file(req, None).await.unwrap();
+        assert!(issues.is_empty()); // Should be empty without AI
     }
 }

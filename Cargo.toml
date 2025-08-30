@@ -24,12 +24,12 @@ crossterm = "0.28.1"
 futures = "0.3.31"
 git2 = "0.19"
 # Avoid pulling GPU backends (e.g., CUDA via cudarc) by default; opt-in via our cargo features
-kalosm = { version = "0.4.0", default-features = false, features = ["language"] }
+kalosm = { version = "0.4.0", default-features = true, features = ["language", "llama"] }
 rat-cursor = "1.2.0"
 rat-event = "1.1.0"
 rat-focus = "0.31.0"
 ratatui = { version = "0.29.0", features = ["unstable-widget-ref"] }
-rayon = "1.8"
+rayon = { version = "1.8", optional = true }
 num_cpus = "1.16"
 regex = "1.11.1"
 serde = { version = "1.0", features = ["derive"] }
@@ -48,16 +48,23 @@ tokio-test = "0.4.4"
 insta = "1.40.0"
 
 [features]
-default = ["auto-gpu"]
-# Auto-detect and enable GPU features
-auto-gpu = []
-# GPU acceleration features - these add the respective features to kalosm
+# Default features with automatic GPU selection based on platform
+default = ["llama", "parallel", "auto-gpu"]
+llama = ["kalosm/llama"]
+parallel = ["rayon"]
+
+# GPU backend features
 gpu-metal = ["kalosm/metal"]
-# Keep `gpu-cuda` as a no-op feature for dependency graph on non-Windows.
-# Windows-specific CI can use this feature as a marker; dependency-level CUDA enablement is intentionally avoided here
-# to prevent cudarc/nvcc from being pulled on other platforms.
-gpu-cuda = []
-gpu-mkl = ["kalosm/mkl"]
+gpu-mkl = ["kalosm/mkl"]  
+gpu-cuda = ["kalosm/cuda"]
+
+# Auto GPU detection (will be resolved at build time)
+auto-gpu = []
+
+# Platform-specific auto features (for manual override)
+auto-metal = ["gpu-metal"]   # Force Metal (macOS)
+auto-cuda = ["gpu-cuda"]     # Force CUDA (Linux/Windows with NVIDIA)
+auto-mkl = ["gpu-mkl"]       # Force Intel MKL
 
 [build-dependencies]
 # No additional dependencies needed for GPU detection

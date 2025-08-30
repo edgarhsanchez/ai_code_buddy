@@ -6,7 +6,6 @@ use crate::core::{
 };
 use anyhow::Result;
 use num_cpus;
-use rayon::prelude::*;
 use tokio::sync::mpsc;
 
 pub async fn perform_analysis_with_progress(
@@ -18,7 +17,9 @@ pub async fn perform_analysis_with_progress(
     let git_analyzer = GitAnalyzer::new(&args.repo_path)?;
 
     // Get changed files between branches
-    let changed_files = git_analyzer.get_changed_files(&args.source_branch, &args.target_branch)?;
+    let source_branch = args.get_source_branch(&args.repo_path);
+    let target_branch = args.get_target_branch();
+    let changed_files = git_analyzer.get_changed_files(&source_branch, &target_branch)?;
 
     println!("📈 Found {} changed files", changed_files.len());
 
@@ -39,7 +40,7 @@ pub async fn perform_analysis_with_progress(
     } else if args.use_gpu {
         println!("🚀 GPU acceleration enabled (auto-detected or requested)");
     }
-    let ai_analyzer = AIAnalyzer::new(use_gpu, !args.disable_ai).await?;
+    let ai_analyzer = AIAnalyzer::new(use_gpu).await?;
 
     // Create progress channel
     let (progress_tx, mut progress_rx) = mpsc::unbounded_channel::<ProgressUpdate>();
@@ -128,7 +129,7 @@ async fn perform_sequential_analysis(
                 "  {status_indicator} Analyzing: {file_path} ({commit_status:?}) [{file_progress:.1}%]"
             );
 
-            if let Ok(content) = git_analyzer.get_file_content(file_path, &args.target_branch) {
+            if let Ok(content) = git_analyzer.get_file_content(file_path, &args.get_target_branch()) {
                 let request = AnalysisRequest {
                     file_path: file_path.clone(),
                     content,
@@ -181,7 +182,7 @@ async fn perform_parallel_analysis(
                 .get_file_status(file_path)
                 .unwrap_or(crate::core::review::CommitStatus::Committed);
 
-            if let Ok(content) = git_analyzer.get_file_content(file_path, &args.target_branch) {
+            if let Ok(content) = git_analyzer.get_file_content(file_path, &args.get_target_branch()) {
                 let request = AnalysisRequest {
                     file_path: file_path.clone(),
                     content,
@@ -193,16 +194,78 @@ async fn perform_parallel_analysis(
         }
     }
 
-    println!(
-        "📊 Processing {} files in parallel using {} threads",
-        file_requests.len(),
-        num_cpus::get()
-    );
+    #[cfg(feature = "parallel")]
+    if args.parallel {
+        println!(
+            "📊 Processing {} files using AI analysis (parallel processing enabled)",
+            file_requests.len()
+        );
+        
+        // Use a simpler parallel approach: process files in chunks sequentially 
+        // but use tokio::spawn for each chunk to avoid overwhelming the system
+        let chunk_size = 3; // Process 3 files at a time in parallel
+        let mut all_results = Vec::new();
+        
+        for chunk in file_requests.chunks(chunk_size) {
+            for (chunk_index, (_, request)) in chunk.iter().cloned().enumerate() {
+                let ai_analyzer_ref = &ai_analyzer;
+                let total_files = total_files;
+                let actual_index = all_results.len() + chunk_index;
+                
+                // Use regular async calls within the current runtime
+                let file_path = request.file_path.clone();
+                let status_indicator = match request.commit_status {
+                    crate::core::review::CommitStatus::Committed => "📄",
+                    crate::core::review::CommitStatus::Staged => "📑",
+                    crate::core::review::CommitStatus::Modified => "📝",
+                    crate::core::review::CommitStatus::Untracked => "📄",
+                };
 
-    // Now process the analysis requests in parallel
-    let analysis_results: Vec<_> = file_requests
-        .into_par_iter()
-        .map(|(index, request)| {
+                let file_progress = (actual_index as f64 / total_files) * 100.0;
+                println!(
+                    "  {status_indicator} Analyzing: {} ({:?}) [{:.1}%]",
+                    file_path, request.commit_status, file_progress
+                );
+
+                // Run AI analysis directly (not spawned, to avoid AI model sharing issues)
+                match ai_analyzer_ref.ai_analysis(&request).await {
+                    Ok(issues) => {
+                        println!("    ✅ AI analysis found {} issues in {}", issues.len(), file_path);
+                        all_results.push((actual_index, Ok(issues)));
+                    }
+                    Err(e) => {
+                        println!("    ⚠️  Failed to analyze {}: {}", file_path, e);
+                        all_results.push((actual_index, Err(e)));
+                    }
+                }
+            }
+        }
+        
+        // Add issues to review
+        for (_, result) in all_results {
+            if let Ok(file_issues) = result {
+                for issue in file_issues {
+                    match issue.severity.as_str() {
+                        "Critical" => review.critical_issues += 1,
+                        "High" => review.high_issues += 1,
+                        "Medium" => review.medium_issues += 1,
+                        "Low" => review.low_issues += 1,
+                        _ => {}
+                    }
+                    review.issues.push(issue);
+                    review.issues_count += 1;
+                }
+            }
+        }
+    } else {
+        println!(
+            "📊 Processing {} files using AI analysis (sequential processing)",
+            file_requests.len()
+        );
+
+        // Process files sequentially (original behavior)
+        // Process files sequentially (original behavior)
+        for (index, request) in file_requests {
             let file_path = request.file_path.clone();
             let status_indicator = match request.commit_status {
                 crate::core::review::CommitStatus::Committed => "📄",
@@ -217,43 +280,32 @@ async fn perform_parallel_analysis(
                 file_path, request.commit_status, file_progress
             );
 
-            // Perform synchronous rule-based analysis (since AI is disabled)
-            match ai_analyzer.rule_based_analysis(&request) {
+            // Use AI analysis
+            match ai_analyzer.ai_analysis(&request).await {
                 Ok(issues) => {
-                    println!("    ✅ Found {} issues in {}", issues.len(), file_path);
-                    Ok(issues)
+                    println!("    ✅ AI analysis found {} issues in {}", issues.len(), file_path);
+                    
+                    // Add issues to review
+                    for issue in issues {
+                        match issue.severity.as_str() {
+                            "Critical" => review.critical_issues += 1,
+                            "High" => review.high_issues += 1,
+                            "Medium" => review.medium_issues += 1,
+                            "Low" => review.low_issues += 1,
+                            _ => {}
+                        }
+                        review.issues.push(issue);
+                        review.issues_count += 1;
+                    }
                 }
                 Err(e) => {
                     eprintln!("⚠️  Failed to analyze {file_path}: {e}");
-                    Err(e)
                 }
-            }
-        })
-        .collect();
-
-    // Collect results
-    for result in analysis_results {
-        match result {
-            Ok(issues) => {
-                for issue in issues {
-                    match issue.severity.as_str() {
-                        "Critical" => review.critical_issues += 1,
-                        "High" => review.high_issues += 1,
-                        "Medium" => review.medium_issues += 1,
-                        "Low" => review.low_issues += 1,
-                        _ => {}
-                    }
-                    review.issues.push(issue);
-                    review.issues_count += 1;
-                }
-            }
-            Err(e) => {
-                eprintln!("⚠️  Analysis failed: {e}");
             }
         }
     }
 
-    println!("🎯 Parallel analysis complete!");
+    println!("🎯 AI analysis complete!");
     Ok(())
 }
 
@@ -332,8 +384,8 @@ mod tests {
     fn mk_args(include: Vec<&str>, exclude: Vec<&str>) -> Args {
         Args {
             repo_path: ".".to_string(),
-            source_branch: "main".to_string(),
-            target_branch: "HEAD".to_string(),
+            source_branch: Some("main".to_string()),
+            target_branch: Some("HEAD".to_string()),
             cli_mode: false,
             verbose: false,
             show_credits: false,
@@ -343,7 +395,8 @@ mod tests {
             use_gpu: false,
             force_cpu: true,
             parallel: false,
-            disable_ai: false,
+            model: None,
+            list_models: false,
         }
     }
 
